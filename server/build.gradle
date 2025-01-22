@@ -26,3 +26,7 @@ application {
     applicationDefaultJvmArgs = ["-Dserver.port=${serverPort}"]
     mainClass = 'com.example.loveletter.TCPServer'
 }
+
+run {
+    standardInput = System.in
+}

@@ -11,8 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@SuppressWarnings("CallToPrintStackTrace")
+@SuppressWarnings({"CallToPrintStackTrace", "unused"})
 public class TCPServer {
+
+    private static final Game game = null;
 
     private static final int SERVER_PORT = Integer.parseInt(System.getProperty("server.port", "12345"));
     private static final Map<String, PrintWriter> clients = new ConcurrentHashMap<>();
