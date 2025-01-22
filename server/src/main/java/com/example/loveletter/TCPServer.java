@@ -73,7 +73,7 @@ public class TCPServer {
 
                 // Prompt for the last date
                 while (true) {
-                    out.println("When was your most last date (YYYY-MM-DD):");
+                    out.println("When was your last date (YYYY-MM-DD):");
                     String dateInput = in.readLine();
 
                     if (dateInput == null || dateInput.trim().isEmpty()) {
