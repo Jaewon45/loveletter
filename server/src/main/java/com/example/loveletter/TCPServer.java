@@ -95,6 +95,7 @@ public class TCPServer {
         }
 
         private void broadcast(String message, String excludeUser) {
+            System.out.println(message);
             synchronized (clients) {
                 clients.forEach((name, writer) -> {
                     if (!name.equals(excludeUser)) {
