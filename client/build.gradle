@@ -20,6 +20,7 @@ file('../config.properties').withInputStream { stream ->
 }
 
 def serverPort = config.getProperty('server.port') ?: 12345
+def serverHost = config.getProperty('server.host') ?: 'localhost'
 
 application {
     applicationDefaultJvmArgs = ["-Dserver.port=${serverPort}"]
