@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.example.loveletter'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+import java.util.Properties
+
+def config = new Properties()
+file('../config.properties').withInputStream { stream ->
+    config.load(stream)
+}
+
+def serverPort = config.getProperty('server.port') ?: 12345
+
+application {
+    applicationDefaultJvmArgs = ["-Dserver.port=${serverPort}"]
+}

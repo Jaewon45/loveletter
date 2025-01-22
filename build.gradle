@@ -1,0 +1,14 @@
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'application'
+}
+
+task runServer(type: GradleBuild) {
+    dir = 'server'
+    tasks = ['run']
+}
+
+task runClient(type: GradleBuild) {
+    dir = 'client'
+    tasks = ['run']
+}
