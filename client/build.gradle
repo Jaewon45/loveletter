@@ -23,4 +23,5 @@ def serverPort = config.getProperty('server.port') ?: 12345
 
 application {
     applicationDefaultJvmArgs = ["-Dserver.port=${serverPort}"]
+    mainClass = 'com.example.loveletter.TCPClient'
 }
