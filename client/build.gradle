@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group = 'com.example.loveletter'
@@ -25,4 +26,8 @@ def serverHost = config.getProperty('server.host') ?: 'localhost'
 application {
     applicationDefaultJvmArgs = ["-Dserver.port=${serverPort}"]
     mainClass = 'com.example.loveletter.TCPClient'
+}
+
+run {
+    standardInput = System.in
 }

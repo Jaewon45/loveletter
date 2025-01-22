@@ -28,7 +28,7 @@ public class TCPServer {
                 executor.execute(new ClientHandler(clientSocket));
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("I/O error: " + e.getMessage());
         }
     }
 
@@ -74,7 +74,7 @@ public class TCPServer {
                 }
 
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("I/O error: " + e.getMessage());
             } finally {
                 disconnect();
             }
@@ -90,7 +90,7 @@ public class TCPServer {
             try {
                 socket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("I/O error: " + e.getMessage());
             }
         }
 
