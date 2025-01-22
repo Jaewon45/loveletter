@@ -19,9 +19,10 @@ public class TCPServer {
     private static Game game = null;
 
     private static final int SERVER_PORT = Integer.parseInt(System.getProperty("server.port", "12345"));
-    private static final Map<String, PrintWriter> clients = new ConcurrentHashMap<>();
+    private static final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
 
     private static boolean gameStarted = false;
+    private static ClientHandler hostClient = null;
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
@@ -43,6 +44,8 @@ public class TCPServer {
         private final Socket socket;
         private String nickname;
         private LocalDate lastRomanticDate;
+        private PrintWriter out;
+        private boolean isHost = false;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -52,7 +55,9 @@ public class TCPServer {
         public void run() {
             System.out.println("Client connected: " + socket.getInetAddress());
             try (
-                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter out = new PrintWriter(socket.getOutputStream(), true)) {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
+
+                this.out = writer;
 
                 // Login process
                 while (true) {
@@ -63,17 +68,23 @@ public class TCPServer {
                         out.println("ERROR: Nickname is invalid or already in use.");
                     } else {
                         synchronized (clients) {
-                            clients.put(nickname, out);
+                            clients.put(nickname, this);
                         }
                         out.println("WELCOME: " + nickname);
                         broadcast("BROADCAST: " + nickname + " joined the chat.", null);
+
+                        synchronized (TCPServer.class) {
+                            if (hostClient == null) {
+                                hostClient = this;
+                                isHost = true;
+                            }
+                        }
                         break;
                     }
                 }
 
-                // Prompt for the last date
                 while (true) {
-                    out.println("When was your last date (YYYY-MM-DD):");
+                    out.println("Enter the date of your last romantic date (YYYY-MM-DD):");
                     String dateInput = in.readLine();
 
                     if (dateInput == null || dateInput.trim().isEmpty()) {
@@ -83,39 +94,60 @@ public class TCPServer {
 
                     try {
                         lastRomanticDate = LocalDate.parse(dateInput.trim());
-                        out.println("RECEIVED: Last date set to " + lastRomanticDate);
+                        out.println("RECEIVED: Last romantic date set to " + lastRomanticDate);
                         break;
                     } catch (DateTimeParseException e) {
                         out.println("ERROR: Invalid date format. Please use YYYY-MM-DD.");
                     }
                 }
 
-                // Check if this is the first client to start the game
-                synchronized (TCPServer.class) {
-                    if (!gameStarted) {
-                        game = new Game(clients.keySet().toArray(String[]::new));
-                        gameStarted = true;
-                        out.println("GAME: The game has started!");
-                        System.out.println("Game has been initialized by " + nickname);
-                        // Stop further processing as per your instruction
-                        return;
-                    }
+                if (isHost) {
+                    out.println("INFO: Type 'START' to begin the game when ready.");
                 }
 
-                // Message loop
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.equalsIgnoreCase("BYE")) {
-                        broadcast("BROADCAST: " + nickname + " left the chat.", nickname);
+                        out.println("INFO: Disconnecting from the server...");
                         break;
+                    } else if (isHost && message.equalsIgnoreCase("START")) {
+                        handleStartCommand();
+                        break;
+                    } else {
+                        broadcast("BROADCAST: " + nickname + ": " + message, nickname);
                     }
-                    broadcast("BROADCAST: " + nickname + ": " + message, nickname);
                 }
 
             } catch (IOException e) {
-                System.err.println("I/O error: " + e.getMessage());
+                System.err.println("I/O error with client " + nickname + ": " + e.getMessage());
             } finally {
                 disconnect();
+            }
+        }
+
+        private void handleStartCommand() {
+            synchronized (TCPServer.class) {
+                if (gameStarted) {
+                    out.println("ERROR: Game has already started.");
+                    return;
+                }
+
+                int clientCount = clients.size();
+                if (clientCount < 2) {
+                    out.println("ERROR: At least 2 players are required to start the game.");
+                    return;
+                }
+                if (clientCount > 8) {
+                    out.println("ERROR: Maximum of 8 players allowed.");
+                    return;
+                }
+
+                String[] playerNames = clients.keySet().toArray(String[]::new);
+                game = new Game(playerNames);
+                gameStarted = true;
+
+                broadcast("GAME: The game has started with players: " + String.join(", ", playerNames), null);
+                System.out.println("Game has been initialized by " + nickname);
             }
         }
 
@@ -126,19 +158,33 @@ public class TCPServer {
                 }
                 broadcast("BROADCAST: " + nickname + " left the chat.", null);
             }
+
+            if (isHost) {
+                synchronized (TCPServer.class) {
+                    if (!clients.isEmpty()) {
+                        ClientHandler newHost = clients.values().iterator().next();
+                        newHost.isHost = true;
+                        hostClient = newHost;
+                        newHost.out.println("INFO: The previous host has disconnected. You are now the host. Type 'START' to begin the game.");
+                    } else {
+                        hostClient = null;
+                    }
+                }
+            }
+
             try {
                 socket.close();
             } catch (IOException e) {
-                System.err.println("I/O error: " + e.getMessage());
+                System.err.println("I/O error while closing socket for " + nickname + ": " + e.getMessage());
             }
         }
 
         private void broadcast(String message, String excludeUser) {
             System.out.println(message);
             synchronized (clients) {
-                clients.forEach((name, writer) -> {
+                clients.forEach((name, handler) -> {
                     if (excludeUser == null || !name.equals(excludeUser)) {
-                        writer.println(message);
+                        handler.out.println(message);
                     }
                 });
             }

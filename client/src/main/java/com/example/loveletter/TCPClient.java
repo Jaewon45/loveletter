@@ -17,7 +17,6 @@ public class TCPClient {
                 Socket socket = new Socket(SERVER_HOST, SERVER_PORT); BufferedReader serverIn = new BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter serverOut = new PrintWriter(socket.getOutputStream(), true); BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in))) {
             System.out.println("Connected to server on port " + SERVER_PORT);
 
-            // Thread to handle incoming messages from the server
             Thread serverListener = new Thread(() -> {
                 try {
                     String message;
@@ -25,9 +24,7 @@ public class TCPClient {
                         if (message.startsWith("BROADCAST:") || message.startsWith("WELCOME:") || message.startsWith("ERROR:") || message.startsWith("GAME:") || message.startsWith("RECEIVED:")) {
                             System.out.println("SERVER: " + message);
                         } else {
-                            // For prompts like "Enter your nickname:" or "Enter the date..."
                             System.out.println("SERVER: " + message);
-                            // Wait for user input and send it to the server
                             String userResponse = userIn.readLine();
                             if (userResponse != null) {
                                 serverOut.println(userResponse);
@@ -43,8 +40,7 @@ public class TCPClient {
 
             serverListener.start();
 
-            // Main thread can handle other tasks or simply wait for the server listener to finish
-            serverListener.join(); // Wait for the listener thread to finish
+            serverListener.join();
 
             System.out.println("Client terminated.");
 
@@ -53,7 +49,7 @@ public class TCPClient {
             e.printStackTrace();
         } catch (InterruptedException e) {
             System.err.println("Interrupted: " + e.getMessage());
-            Thread.currentThread().interrupt(); // Restore the interrupted status
+            Thread.currentThread().interrupt();
         }
     }
 }
