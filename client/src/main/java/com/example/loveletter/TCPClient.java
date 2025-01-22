@@ -22,7 +22,18 @@ public class TCPClient {
                 try {
                     String message;
                     while ((message = serverIn.readLine()) != null) {
-                        System.out.println("SERVER: " + message);
+                        if (message.startsWith("BROADCAST:") || message.startsWith("WELCOME:") || message.startsWith("ERROR:") || message.startsWith("GAME:") || message.startsWith("RECEIVED:")) {
+                            System.out.println("SERVER: " + message);
+                        } else {
+                            // For prompts like "Enter your nickname:" or "Enter the date..."
+                            System.out.println("SERVER: " + message);
+                            // Wait for user input and send it to the server
+                            String userResponse = userIn.readLine();
+                            if (userResponse != null) {
+                                serverOut.println(userResponse);
+                                System.out.println("SENDING: " + userResponse);
+                            }
+                        }
                     }
                 } catch (IOException e) {
                     System.out.println("Disconnected from server.");
@@ -32,18 +43,7 @@ public class TCPClient {
 
             serverListener.start();
 
-            // Main thread handles user input
-            String userInput;
-            while ((userInput = userIn.readLine()) != null) {
-                System.out.println("SENDING: " + userInput);
-                serverOut.println(userInput);
-                if ("BYE".equalsIgnoreCase(userInput.trim())) {
-                    break;
-                }
-            }
-
-            // Close the socket which will also close the server listener thread
-            socket.close();
+            // Main thread can handle other tasks or simply wait for the server listener to finish
             serverListener.join(); // Wait for the listener thread to finish
 
             System.out.println("Client terminated.");
