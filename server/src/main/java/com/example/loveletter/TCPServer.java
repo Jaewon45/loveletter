@@ -43,7 +43,7 @@ public class TCPServer {
 
         private final Socket socket;
         private String nickname;
-        private LocalDate lastRomanticDate;
+        private LocalDate lastDate;
         private PrintWriter out;
         private boolean isHost = false;
 
@@ -84,7 +84,7 @@ public class TCPServer {
                 }
 
                 while (true) {
-                    out.println("Enter the date of your last romantic date (YYYY-MM-DD):");
+                    out.println("When was your last date (YYYY-MM-DD):");
                     String dateInput = in.readLine();
 
                     if (dateInput == null || dateInput.trim().isEmpty()) {
@@ -93,8 +93,8 @@ public class TCPServer {
                     }
 
                     try {
-                        lastRomanticDate = LocalDate.parse(dateInput.trim());
-                        out.println("RECEIVED: Last romantic date set to " + lastRomanticDate);
+                        lastDate = LocalDate.parse(dateInput.trim());
+                        out.println("RECEIVED: Last date set to " + lastDate);
                         break;
                     } catch (DateTimeParseException e) {
                         out.println("ERROR: Invalid date format. Please use YYYY-MM-DD.");
@@ -112,6 +112,14 @@ public class TCPServer {
                         break;
                     } else if (isHost && message.equalsIgnoreCase("START")) {
                         handleStartCommand();
+
+                        while (game.nextRound()) {
+                            //make the player choose one of their cards to play
+                            out.println("You have the following cards: " + game.getCurrentPlayer().getCards());
+                            out.println("INFO: Choose a card to play: ");
+                            Card cardToPlay = Card.fromString(in.readLine());
+
+                        }
                         break;
                     } else {
                         broadcast("BROADCAST: " + nickname + ": " + message, nickname);
@@ -123,6 +131,7 @@ public class TCPServer {
             } finally {
                 disconnect();
             }
+
         }
 
         private void handleStartCommand() {
@@ -142,7 +151,10 @@ public class TCPServer {
                     return;
                 }
 
-                String[] playerNames = clients.keySet().toArray(String[]::new);
+                String[] playerNames = clients.values().stream()
+                        .sorted((c1, c2) -> c1.lastDate.compareTo(c2.lastDate))
+                        .map(c -> c.nickname)
+                        .toArray(String[]::new);
                 game = new Game(playerNames);
                 gameStarted = true;
 

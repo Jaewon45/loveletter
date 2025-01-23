@@ -5,7 +5,7 @@ class Game {
 
     private final Deck deck;
     private final Player[] players;
-    private final int currentPlayerIndex = 0;
+    private int currentPlayerIndex = 0;
     private final int round = 0;
 
     public Game(String[] playerNames) {
@@ -21,4 +21,15 @@ class Game {
         }
 
     }
+
+    boolean nextRound() {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        players[currentPlayerIndex].addCard(deck.draw());
+        return true;
+    }
+
+    public Player getCurrentPlayer() {
+        return players[currentPlayerIndex];
+    }
+
 }
