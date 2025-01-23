@@ -5,6 +5,7 @@ import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
 public class BaronEffect implements Effect {
+
     @Override
     public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
         if (targetPlayer == null || !targetPlayer.isAlive()) {

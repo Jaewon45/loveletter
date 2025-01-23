@@ -1,13 +1,12 @@
 package com.example.loveletter;
 
 @SuppressWarnings("unused")
-public
-class Game {
+public class Game {
 
     private final Deck deck;
     private final Player[] players;
-    private final int currentPlayerIndex = 0;
-    private final int round = 0;
+    private int currentPlayerIndex = -1;
+    private final int round = -1;
 
     public Game(String[] playerNames) {
         deck = new Deck(playerNames.length);
@@ -22,20 +21,21 @@ class Game {
         }
     }
 
-    /** "Knock out" (eliminate) a player from the round */
+    /**
+     * "Knock out" (eliminate) a player from the round
+     */
     public void eliminatePlayer(Player p) {
         p.setAlive(false);
         System.out.println(p.getName() + " has been knocked out of the round!");
     }
 
     /**
-     * The main method to discard a card. 
-     *  - Applies special checks (Princess).
-     *  - Calls the card's effect if appropriate.
+     * The main method to discard a card. - Applies special checks (Princess). -
+     * Calls the card's effect if appropriate.
      */
     public void discardCard(Player currentPlayer, Card cardToDiscard, Player target, int guess) {
         System.out.println(currentPlayer.getName() + " discards " + cardToDiscard.getName());
-        
+
         // 1) Remove the card from the player's hand
         currentPlayer.getHand().remove(cardToDiscard);
         // 2) If this is the Princess (rank 8), that player is immediately knocked out
@@ -48,11 +48,11 @@ class Game {
         // 3) Otherwise, apply the card's effect
         cardToDiscard.getEffect().apply(this, currentPlayer, target, guess);
     }
-    
+
     /**
-     * After a player draws a card (resulting in 2 cards in hand),
-     * we must check the special Countess rule:
-     *  - If they have Countess (7) AND King (6) or Prince (5), they MUST discard Countess.
+     * After a player draws a card (resulting in 2 cards in hand), we must check
+     * the special Countess rule: - If they have Countess (7) AND King (6) or
+     * Prince (5), they MUST discard Countess.
      */
     public void checkCountessRule(Player player) {
         if (player.getHand().size() == 2) {
@@ -61,7 +61,7 @@ class Game {
 
             boolean hasCountess = (c1.getRank() == 7) || (c2.getRank() == 7);
             boolean hasRoyal = (c1.getRank() == 5 || c1.getRank() == 6)
-                            || (c2.getRank() == 5 || c2.getRank() == 6);
+                    || (c2.getRank() == 5 || c2.getRank() == 6);
 
             if (hasCountess && hasRoyal) {
                 // Must discard Countess
@@ -78,12 +78,22 @@ class Game {
             p.clearHandmaidProtection();
         }
     } */
-
     public Deck getDeck() {
         return deck;
     }
-    
+
     public Player[] getPlayers() {
         return players;
     }
+
+    boolean nextRound() {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        players[currentPlayerIndex].addCard(deck.draw());
+        return true;
+    }
+
+    public Player getCurrentPlayer() {
+        return players[currentPlayerIndex];
+    }
+
 }

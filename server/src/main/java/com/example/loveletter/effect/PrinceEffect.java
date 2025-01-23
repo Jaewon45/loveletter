@@ -4,8 +4,8 @@ import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
-
 public class PrinceEffect implements Effect {
+
     @Override
     public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
         if (targetPlayer == null || !targetPlayer.isAlive()) {
@@ -15,7 +15,7 @@ public class PrinceEffect implements Effect {
         // Force discard
         if (!targetPlayer.getHand().isEmpty()) {
             Card cardToDiscard = targetPlayer.getHand().get(0);
-            game.discardCard(targetPlayer, cardToDiscard, null, -1); 
+            game.discardCard(targetPlayer, cardToDiscard, null, -1);
             // If that was the Princess => target is knocked out in discardCard.
         }
 
@@ -25,7 +25,7 @@ public class PrinceEffect implements Effect {
             if (newCard != null) {
                 targetPlayer.addCard(newCard);
                 System.out.println("Prince: " + targetPlayer.getName() + " draws a new card.");
-            }        
-}
+            }
+        }
     }
 }

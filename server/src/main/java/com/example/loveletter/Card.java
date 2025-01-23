@@ -1,27 +1,45 @@
 package com.example.loveletter;
 
+import com.example.loveletter.effect.BaronEffect;
+import com.example.loveletter.effect.CountessEffect;
 import com.example.loveletter.effect.Effect;
+import com.example.loveletter.effect.GuardEffect;
+import com.example.loveletter.effect.HandmaidEffect;
+import com.example.loveletter.effect.KingEffect;
+import com.example.loveletter.effect.PriestEffect;
+import com.example.loveletter.effect.PrinceEffect;
+import com.example.loveletter.effect.PrincessEffect;
 
+@SuppressWarnings("unused")
 public enum Card {
-    GUARD(1, "Guard", 5),
-    PRIEST(2, "Priest", 2),
-    BARON(3, "Baron", 2),
-    HANDMAID(4, "Handmaid", 2),
-    PRINCE(5, "Prince", 2),
-    KING(6, "King", 1),
-    COUNTESS(7, "Countess", 1),
-    PRINCESS(8, "Princess", 1);
+    GUARD(1, "Guard", "When you discard the Guard, choose a player and name a number (other than 1). If that player has that number in their hand, that player is knocked out of the round. If all other players still in the round cannot be chosen (eg. due to Handmaid or Sycophant), this card is discarded without effect.", new GuardEffect()),
+    PRIEST(2, "Priest", "When you discard the Priest, you can look at another player's hand. Do not reveal the hand to any other players.", new PriestEffect()),
+    BARON(3, "Baron", "When you discard the Baron, choose another player still in the round. You and that player secretly compare your hands. The player with the lower number is knocked out of the round. In case of a tie, nothing happens.", new BaronEffect()),
+    HANDMAID(4, "Handmaid", "When you discard the Handmaid, you are immune to the effects of other players' cards until the start of your next turn. If all players other than the player whose turn it is are protected by the Handmaid, the player must choose him or herself for a card's effects, if possible", new HandmaidEffect()),
+    PRINCE(5, "Prince", "When you discard Prince Arnaud, choose one player still in the round (including yourself). That player discards his or her hand (but doesn't apply its effect, unless it is the Princess, see page 8) and draws a new one. If the deck is empty and the player cannot draw a card, that player draws the card that was removed at the start of the round. If all other players are protected by the Handmaid, you must choose yourself.", new PrinceEffect()),
+    KING(6, "King", "When you discard King Arnaud IV, trade the card in your hand with the card held by another player of your choice. You cannot trade with a player who is out of the round", new KingEffect()),
+    COUNTESS(7, "Countess", "like other cards, which take effect when discarded, the text on the Countess applies while she is in your hand. In fact, the only time it doesn't apply is when you discard her. If you ever have the Countess and either the King or Prince in your hand, you must discard the Countess. You do not have to reveal the other card in your hand. Of course, you can also discard the Countess even if you do not have a royal family member in your hand. The Countess likes to play mind games....", new CountessEffect()),
+    PRINCESS(8, "Princess", "If you discard the Princess—no matter how or why—she has tossed your letter into the fire. You are immediately knocked out of the round. If the Princess was discarded by a card effect, any remaining effects of that card do not apply (you do not draw a card from the Prince, for example). Effects tied to being knocked out the round still apply (e.g., Constable, Jester), however.", new PrincessEffect());
 
     private final int rank;
     private final String name;
-    private final int count;
+    private final String description;
     private final Effect effect;
 
-    Card(int rank, String name, int count) {
+    Card(int rank, String name, String description, Effect effect) {
         this.rank = rank;
         this.name = name;
-        this.count = count;
+        this.description = description;
         this.effect = effect;
+    }
+
+    static public Card fromString(String name) {
+        for (Card card : Card.values()) {
+            if (card.getName().equals(name)) {
+                return card;
+            }
+        }
+        return null;
     }
 
     public int getRank() {
@@ -32,8 +50,8 @@ public enum Card {
         return name;
     }
 
-    public int getCount() {
-        return count;
+    public String getDescription() {
+        return description;
     }
 
     public Effect getEffect() {

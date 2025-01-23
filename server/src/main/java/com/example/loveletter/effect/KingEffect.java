@@ -5,6 +5,7 @@ import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
 public class KingEffect implements Effect {
+
     @Override
     public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
         if (targetPlayer == null || !targetPlayer.isAlive()) {
@@ -20,7 +21,7 @@ public class KingEffect implements Effect {
             currentPlayer.addCard(theirCard);
             targetPlayer.addCard(myCard);
 
-            System.out.println("King: " + currentPlayer.getName() 
+            System.out.println("King: " + currentPlayer.getName()
                     + " swapped hands with " + targetPlayer.getName());
         }
     }

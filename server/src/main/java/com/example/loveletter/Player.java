@@ -60,5 +60,4 @@ public class Player {
         return nickname + (alive ? "" : " (knocked out)");
     }
 
-
 }

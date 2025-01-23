@@ -5,6 +5,7 @@ import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
 public class GuardEffect implements Effect {
+
     @Override
     public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
         // Must name a rank other than 1, guess in [2..8]
