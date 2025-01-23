@@ -38,8 +38,8 @@ public enum Card {
         return name;
     }
 
-    public int getCount() {
-        return count;
+    public String getEffect() {
+        return effect;
     }
 
     public static Card getCard(int value) {

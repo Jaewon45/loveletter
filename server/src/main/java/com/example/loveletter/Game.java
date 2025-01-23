@@ -5,8 +5,8 @@ class Game {
 
     private final Deck deck;
     private final Player[] players;
-    private int currentPlayerIndex = 0;
-    private final int round = 0;
+    private int currentPlayerIndex = -1;
+    private final int round = -1;
 
     public Game(String[] playerNames) {
         deck = new Deck(playerNames.length);
