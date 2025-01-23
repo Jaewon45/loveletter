@@ -18,7 +18,11 @@ class Player {
         hand.add(draw);
     }
 
-    String getCards() {
+    List<Card> getHand() {
+        return hand;
+    }
+
+    String getCardsString() {
         StringBuilder sb = new StringBuilder();
         for (Card card : hand) {
             sb.append(card).append(" ");

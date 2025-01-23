@@ -22,7 +22,7 @@ public class TCPServer {
     private static final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
 
     private static boolean gameStarted = false;
-    private static ClientHandler hostClient = null;
+    private static ClientHandler hostClient = null; // To keep track of the host
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
@@ -77,6 +77,7 @@ public class TCPServer {
                             if (hostClient == null) {
                                 hostClient = this;
                                 isHost = true;
+                                // we'll tell the client they are the host after the romantic date is set
                             }
                         }
                         break;
@@ -102,7 +103,7 @@ public class TCPServer {
                 }
 
                 if (isHost) {
-                    out.println("INFO: Type 'START' to begin the game when ready.");
+                    out.println("INFO: You are the host. Type 'START' to begin the game when ready.");
                 }
 
                 String message;
@@ -115,8 +116,13 @@ public class TCPServer {
 
                         while (game.nextRound()) {
                             //make the player choose one of their cards to play
-                            out.println("You have the following cards: " + game.getCurrentPlayer().getCards());
+                            out.println("You have the following cards: " + game.getCurrentPlayer().getCardsString());
+                            out.println("Their effects are: ");
+                            for (Card card : game.getCurrentPlayer().getHand()) {
+                                out.println("\u001B[34m" + card.getEffect() + "\u001B[0m");
+                            }
                             out.println("INFO: Choose a card to play: ");
+
                             Card cardToPlay = Card.fromString(in.readLine());
 
                         }
@@ -131,7 +137,6 @@ public class TCPServer {
             } finally {
                 disconnect();
             }
-
         }
 
         private void handleStartCommand() {
@@ -158,6 +163,7 @@ public class TCPServer {
                 game = new Game(playerNames);
                 gameStarted = true;
 
+                // Notify all clients
                 broadcast("GAME: The game has started with players: " + String.join(", ", playerNames), null);
                 System.out.println("Game has been initialized by " + nickname);
             }
@@ -170,8 +176,8 @@ public class TCPServer {
                 }
                 broadcast("BROADCAST: " + nickname + " left the chat.", null);
             }
-
-            if (isHost) {
+            //TODO(fix bug) we need to tell the client that they are the host after the pick name and date but right now it just skips this step
+            if (nickname != null && lastDate != null && isHost) {
                 synchronized (TCPServer.class) {
                     if (!clients.isEmpty()) {
                         ClientHandler newHost = clients.values().iterator().next();

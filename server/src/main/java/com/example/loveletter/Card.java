@@ -21,7 +21,7 @@ public enum Card {
         this.effect = effect;
     }
 
-    public Card fromString(String name) {
+    static public Card fromString(String name) {
         for (Card card : Card.values()) {
             if (card.getName().equals(name)) {
                 return card;
