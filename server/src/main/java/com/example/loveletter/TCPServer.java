@@ -112,20 +112,8 @@ public class TCPServer {
                         out.println("INFO: Disconnecting from the server...");
                         break;
                     } else if (isHost && message.equalsIgnoreCase("START")) {
-                        handleStartCommand();
+                        handleStartCommand(in);
 
-                        while (game.nextRound()) {
-                            //make the player choose one of their cards to play
-                            out.println("You have the following cards: " + game.getCurrentPlayer().getCardsString());
-                            out.println("Their effects are: ");
-                            for (Card card : game.getCurrentPlayer().getHand()) {
-                                out.println("\u001B[34m" + card.getEffect() + "\u001B[0m");
-                            }
-                            out.println("INFO: Choose a card to play: ");
-
-                            Card cardToPlay = Card.fromString(in.readLine());
-
-                        }
                         break;
                     } else {
                         broadcast("BROADCAST: " + nickname + ": " + message, nickname);
@@ -139,7 +127,7 @@ public class TCPServer {
             }
         }
 
-        private void handleStartCommand() {
+        private void handleStartCommand(BufferedReader in) throws IOException {
             synchronized (TCPServer.class) {
                 if (gameStarted) {
                     out.println("ERROR: Game has already started.");
@@ -163,9 +151,20 @@ public class TCPServer {
                 game = new Game(playerNames);
                 gameStarted = true;
 
-                // Notify all clients
                 broadcast("GAME: The game has started with players: " + String.join(", ", playerNames), null);
                 System.out.println("Game has been initialized by " + nickname);
+
+                while (game.nextRound()) {
+                    out.println("You have the following cards: " + game.getCurrentPlayer().getCardsString());
+                    out.println("Their effects are: ");
+                    for (Card card : game.getCurrentPlayer().getHand()) {
+                        out.println("\u001B[34m" + card.getEffect() + "\u001B[0m");
+                    }
+                    out.println("INFO: Choose a card to play: ");
+
+                    Card cardToPlay = Card.fromString(in.readLine());
+
+                }
             }
         }
 
