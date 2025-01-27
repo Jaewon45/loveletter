@@ -12,16 +12,16 @@ public class BaronEffect implements Effect {
             System.out.println("Baron: No valid target.");
             return;
         }
-        // Compare ranks
+        // Compare values
         if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
             Card myCard = currentPlayer.getHand().get(0);
             Card theirCard = targetPlayer.getHand().get(0);
 
-            System.out.println("Baron: " + currentPlayer.getName() + " (" + myCard.getRank()
-                    + ") vs. " + targetPlayer.getName() + " (" + theirCard.getRank() + ")");
-            if (myCard.getRank() > theirCard.getRank()) {
+            System.out.println("Baron: " + currentPlayer.getName() + " (" + myCard.getValue()
+                    + ") vs. " + targetPlayer.getName() + " (" + theirCard.getValue() + ")");
+            if (myCard.getValue() > theirCard.getValue()) {
                 game.eliminatePlayer(targetPlayer);
-            } else if (myCard.getRank() < theirCard.getRank()) {
+            } else if (myCard.getValue() < theirCard.getValue()) {
                 game.eliminatePlayer(currentPlayer);
             } else {
                 System.out.println("Baron: Tie => nothing happens.");

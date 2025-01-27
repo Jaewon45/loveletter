@@ -14,6 +14,6 @@ public class PrincessEffect implements Effect {
 
     @Override
     public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-        System.out.println("Princess: Should not actually call apply if rank=8 is discarded.");
+        throw new RuntimeException("Princess: Should not actually call apply if value=8 is discarded.");
     }
 }

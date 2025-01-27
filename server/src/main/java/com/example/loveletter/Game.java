@@ -38,8 +38,8 @@ public class Game {
 
         // 1) Remove the card from the player's hand
         currentPlayer.getHand().remove(cardToDiscard);
-        // 2) If this is the Princess (rank 8), that player is immediately knocked out
-        if (cardToDiscard.getRank() == 8) {
+        // 2) If this is the Princess (value 8), that player is immediately knocked out
+        if (cardToDiscard.getValue() == 8) {
             eliminatePlayer(currentPlayer);
             // Skip the effect for the Princess. 
             // If another card forced this discard, the effect's further steps for that target are canceled.
@@ -59,13 +59,13 @@ public class Game {
             Card c1 = player.getHand().get(0);
             Card c2 = player.getHand().get(1);
 
-            boolean hasCountess = (c1.getRank() == 7) || (c2.getRank() == 7);
-            boolean hasRoyal = (c1.getRank() == 5 || c1.getRank() == 6)
-                    || (c2.getRank() == 5 || c2.getRank() == 6);
+            boolean hasCountess = (c1.getValue() == 7) || (c2.getValue() == 7);
+            boolean hasRoyal = (c1.getValue() == 5 || c1.getValue() == 6)
+                    || (c2.getValue() == 5 || c2.getValue() == 6);
 
             if (hasCountess && hasRoyal) {
                 // Must discard Countess
-                Card countessCard = (c1.getRank() == 7) ? c1 : c2;
+                Card countessCard = (c1.getValue() == 7) ? c1 : c2;
                 discardCard(player, countessCard, null, -1);
             }
         }

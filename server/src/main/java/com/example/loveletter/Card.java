@@ -21,29 +21,20 @@ public enum Card {
     COUNTESS(7, "Countess", "like other cards, which take effect when discarded, the text on the Countess applies while she is in your hand. In fact, the only time it doesn't apply is when you discard her. If you ever have the Countess and either the King or Prince in your hand, you must discard the Countess. You do not have to reveal the other card in your hand. Of course, you can also discard the Countess even if you do not have a royal family member in your hand. The Countess likes to play mind games....", new CountessEffect()),
     PRINCESS(8, "Princess", "If you discard the Princess—no matter how or why—she has tossed your letter into the fire. You are immediately knocked out of the round. If the Princess was discarded by a card effect, any remaining effects of that card do not apply (you do not draw a card from the Prince, for example). Effects tied to being knocked out the round still apply (e.g., Constable, Jester), however.", new PrincessEffect());
 
-    private final int rank;
+    private final int value;
     private final String name;
     private final String description;
     private final Effect effect;
 
-    Card(int rank, String name, String description, Effect effect) {
-        this.rank = rank;
+    Card(int value, String name, String description, Effect effect) {
+        this.value = value;
         this.name = name;
         this.description = description;
         this.effect = effect;
     }
 
-    static public Card fromString(String name) {
-        for (Card card : Card.values()) {
-            if (card.getName().equals(name)) {
-                return card;
-            }
-        }
-        return null;
-    }
-
-    public int getRank() {
-        return rank;
+    public int getValue() {
+        return value;
     }
 
     public String getName() {
@@ -56,14 +47,5 @@ public enum Card {
 
     public Effect getEffect() {
         return effect;
-    }
-
-    public static Card getCard(int rank) {
-        for (Card card : Card.values()) {
-            if (card.getRank() == rank) {
-                return card;
-            }
-        }
-        return null;
     }
 }

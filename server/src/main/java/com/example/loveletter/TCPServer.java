@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -71,7 +72,7 @@ public class TCPServer {
                             clients.put(nickname, this);
                         }
                         out.println("WELCOME: " + nickname);
-                        broadcast("BROADCAST: " + nickname + " joined the chat.", null);
+                        broadcast("BROADCAST: " + nickname + " joined the room.", null);
 
                         synchronized (TCPServer.class) {
                             if (hostClient == null) {
@@ -155,14 +156,15 @@ public class TCPServer {
                 System.out.println("Game has been initialized by " + nickname);
 
                 while (game.nextRound()) {
-                    out.println("You have the following cards: " + game.getCurrentPlayer().getHand());
+                    List<Card> cards = game.getCurrentPlayer().getHand();
+                    out.println("You have the following cards: " + cards.get(0).getName() + "& " + cards.get(1).getName());
                     out.println("Their effects are: ");
-                    for (Card card : game.getCurrentPlayer().getHand()) {
+                    for (Card card : cards) {
                         out.println("\u001B[34m" + card.getDescription() + "\u001B[0m");
                     }
-                    out.println("INFO: Choose a card to play: ");
+                    out.println("INFO: Choose a card to play - type \"A\" or \"B\" to choose " + cards.get(0).getName() + " and " + cards.get(1).getName() + " respectively");
 
-                    Card cardToPlay = Card.fromString(in.readLine());
+                    String s = in.readLine();
 
                 }
             }
@@ -173,7 +175,7 @@ public class TCPServer {
                 synchronized (clients) {
                     clients.remove(nickname);
                 }
-                broadcast("BROADCAST: " + nickname + " left the chat.", null);
+                broadcast("BROADCAST: " + nickname + " left the room.", null);
             }
             //TODO(fix bug) we need to tell the client that they are the host after the pick name and date but right now it just skips this step
             if (nickname != null && lastDate != null && isHost) {
