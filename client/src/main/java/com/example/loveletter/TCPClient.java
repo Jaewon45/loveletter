@@ -15,22 +15,15 @@ public class TCPClient {
     public static void main(String[] args) {
         try (
                 Socket socket = new Socket(SERVER_HOST, SERVER_PORT); BufferedReader serverIn = new BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter serverOut = new PrintWriter(socket.getOutputStream(), true); BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in))) {
+
             System.out.println("Connected to server on port " + SERVER_PORT);
 
+            // Thread to listen for messages from the server
             Thread serverListener = new Thread(() -> {
                 try {
                     String message;
                     while ((message = serverIn.readLine()) != null) {
-                        if (message.startsWith("BROADCAST:") || message.startsWith("WELCOME:") || message.startsWith("ERROR:") || message.startsWith("GAME:") || message.startsWith("RECEIVED:")) {
-                            System.out.println("SERVER: " + message);
-                        } else {
-                            System.out.println("SERVER: " + message);
-                            String userResponse = userIn.readLine();
-                            if (userResponse != null) {
-                                serverOut.println(userResponse);
-                                System.out.println("SENDING: " + userResponse);
-                            }
-                        }
+                        System.out.println("SERVER: " + message);
                     }
                 } catch (IOException e) {
                     System.out.println("Disconnected from server.");
@@ -40,8 +33,23 @@ public class TCPClient {
 
             serverListener.start();
 
-            serverListener.join();
+            // Main thread for user input
+            String userInput;
+            while (true) {
+                userInput = userIn.readLine();
+                if (userInput == null || userInput.trim().isEmpty()) {
+                    continue;
+                }
+                serverOut.println(userInput);
+                System.out.println("SENDING: " + userInput);
+                if (userInput.equalsIgnoreCase("BYE")) {
+                    break; // Exit if the user types "BYE"
+                }
+            }
 
+            // Clean up
+            serverListener.interrupt(); // Stop the listener thread
+            serverListener.join(); // Wait for the listener thread to finish
             System.out.println("Client terminated.");
 
         } catch (IOException e) {

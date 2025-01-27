@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@SuppressWarnings({"CallToPrintStackTrace", "unused"})
+@SuppressWarnings({ "CallToPrintStackTrace", "unused" })
 public class TCPServer {
 
     private static Game game = null;
@@ -47,6 +47,7 @@ public class TCPServer {
         private LocalDate lastDate;
         private PrintWriter out;
         private boolean isHost = false;
+        private BufferedReader in;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -55,10 +56,10 @@ public class TCPServer {
         @Override
         public void run() {
             System.out.println("Client connected: " + socket.getInetAddress());
-            try (
-                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
-
-                this.out = writer;
+            try {
+                // Initialize streams outside the try-with-resources to keep them open
+                this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                this.out = new PrintWriter(socket.getOutputStream(), true);
 
                 // Login process
                 while (true) {
@@ -70,43 +71,26 @@ public class TCPServer {
                     } else {
                         synchronized (clients) {
                             clients.put(nickname, this);
+                            // Assign host only if it's the first user
+                            if (clients.size() == 1) {
+                                hostClient = this;
+                                isHost = true;
+                            }
                         }
                         out.println("WELCOME: " + nickname);
                         broadcast("BROADCAST: " + nickname + " joined the room.", null);
-
-                        synchronized (TCPServer.class) {
-                            if (hostClient == null) {
-                                hostClient = this;
-                                isHost = true;
-                                // we'll tell the client they are the host after the romantic date is set
-                            }
-                        }
                         break;
                     }
                 }
 
-                while (true) {
-                    out.println("When was your last date (YYYY-MM-DD):");
-                    String dateInput = in.readLine();
-
-                    if (dateInput == null || dateInput.trim().isEmpty()) {
-                        out.println("ERROR: Date cannot be empty.");
-                        continue;
-                    }
-
-                    try {
-                        lastDate = LocalDate.parse(dateInput.trim());
-                        out.println("RECEIVED: Last date set to " + lastDate);
-                        break;
-                    } catch (DateTimeParseException e) {
-                        out.println("ERROR: Invalid date format. Please use YYYY-MM-DD.");
-                    }
-                }
+                // Handle last date input
+                handleLastDateInput(in);
 
                 if (isHost) {
                     out.println("INFO: You are the host. Type 'START' to begin the game when ready.");
                 }
 
+                // Main message handling loop
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.equalsIgnoreCase("BYE")) {
@@ -114,8 +98,6 @@ public class TCPServer {
                         break;
                     } else if (isHost && message.equalsIgnoreCase("START")) {
                         handleStartCommand(in);
-
-                        break;
                     } else {
                         broadcast("BROADCAST: " + nickname + ": " + message, nickname);
                     }
@@ -124,7 +106,27 @@ public class TCPServer {
             } catch (IOException e) {
                 System.err.println("I/O error with client " + nickname + ": " + e.getMessage());
             } finally {
-                disconnect();
+                disconnect(); // Ensure disconnect is called in finally block
+            }
+        }
+
+        private void handleLastDateInput(BufferedReader in) throws IOException {
+            while (true) {
+                out.println("When was your last date (YYYY-MM-DD):");
+                String dateInput = "2024-01-01";// in.readLine();
+
+                if (dateInput == null || dateInput.trim().isEmpty()) {
+                    out.println("ERROR: Date cannot be empty.");
+                    continue;
+                }
+
+                try {
+                    lastDate = LocalDate.parse(dateInput.trim());
+                    out.println("RECEIVED: Last date set to " + lastDate);
+                    break;
+                } catch (DateTimeParseException e) {
+                    out.println("ERROR: Invalid date format. Please use YYYY-MM-DD.");
+                }
             }
         }
 
@@ -155,46 +157,83 @@ public class TCPServer {
                 broadcast("GAME: The game has started with players: " + String.join(", ", playerNames), null);
                 System.out.println("Game has been initialized by " + nickname);
 
-                while (game.nextRound()) {
-                    List<Card> cards = game.getCurrentPlayer().getHand();
-                    out.println("You have the following cards: " + cards.get(0).getName() + "& " + cards.get(1).getName());
-                    out.println("Their effects are: ");
-                    for (Card card : cards) {
-                        out.println("\u001B[34m" + card.getDescription() + "\u001B[0m");
+                try {
+                    // Main game loop
+                    while (true) {
+                        if (!game.nextRound()) {
+                            broadcast("GAME: Game has ended!", null);
+                            break;
+                        }
+
+                        String currentPlayerName = game.getCurrentPlayer().getName();
+                        ClientHandler currentPlayerHandler = clients.get(currentPlayerName);
+
+                        if (currentPlayerHandler != null) {
+                            List<Card> cards = game.getCurrentPlayer().getHand();
+                            currentPlayerHandler.out.println("Your turn!");
+                            currentPlayerHandler.out.println("You have the following cards: " + cards.get(0).getName()
+                                    + " & " + cards.get(1).getName());
+                            currentPlayerHandler.out.println("Their effects are: ");
+                            for (Card card : cards) {
+                                currentPlayerHandler.out.println("\u001B[34m" + card.getDescription() + "\u001B[0m");
+                            }
+                            currentPlayerHandler.out
+                                    .println("INFO: Choose a card to play - type \"A\" or \"B\" to choose "
+                                            + cards.get(0).getName() + " and " + cards.get(1).getName()
+                                            + " respectively");
+
+                            // Broadcast game state to other players
+                            broadcast("GAME: It's " + currentPlayerName + "'s turn!", currentPlayerName);
+
+                            // Wait for player's move
+                            String move = currentPlayerHandler.in.readLine();
+                            if (move == null) {
+                                broadcast("GAME: " + currentPlayerName + " disconnected!", null);
+                                break;
+                            }
+                            // TODO: Process the move and update game state
+
+                            // For now, just broadcast the move
+                            broadcast("GAME: " + currentPlayerName + " played their card!", null);
+                        }
                     }
-                    out.println("INFO: Choose a card to play - type \"A\" or \"B\" to choose " + cards.get(0).getName() + " and " + cards.get(1).getName() + " respectively");
-
-                    String s = in.readLine();
-
+                } finally {
+                    gameStarted = false;
                 }
             }
         }
 
         private void disconnect() {
-            if (nickname != null) {
-                synchronized (clients) {
-                    clients.remove(nickname);
-                }
-                broadcast("BROADCAST: " + nickname + " left the room.", null);
-            }
-            //TODO(fix bug) we need to tell the client that they are the host after the pick name and date but right now it just skips this step
-            if (nickname != null && lastDate != null && isHost) {
-                synchronized (TCPServer.class) {
-                    if (!clients.isEmpty()) {
-                        ClientHandler newHost = clients.values().iterator().next();
-                        newHost.isHost = true;
-                        hostClient = newHost;
-                        newHost.out.println("INFO: The previous host has disconnected. You are now the host. Type 'START' to begin the game.");
-                    } else {
-                        hostClient = null;
+            try {
+                if (nickname != null) {
+                    synchronized (clients) {
+                        clients.remove(nickname);
+                        broadcast("BROADCAST: " + nickname + " left the room.", null);
                     }
                 }
-            }
 
-            try {
-                socket.close();
+                if (isHost) {
+                    synchronized (TCPServer.class) {
+                        if (!clients.isEmpty()) {
+                            ClientHandler newHost = clients.values().iterator().next();
+                            newHost.isHost = true;
+                            hostClient = newHost;
+                            newHost.out.println(
+                                    "INFO: The previous host has disconnected. You are now the host. Type 'START' to begin the game.");
+                        } else {
+                            hostClient = null;
+                        }
+                    }
+                }
+
+                if (in != null)
+                    in.close();
+                if (out != null)
+                    out.close();
+                if (socket != null && !socket.isClosed())
+                    socket.close();
             } catch (IOException e) {
-                System.err.println("I/O error while closing socket for " + nickname + ": " + e.getMessage());
+                System.err.println("Error during disconnect for " + nickname + ": " + e.getMessage());
             }
         }
 

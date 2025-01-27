@@ -1,3 +1,4 @@
 bugs:
 - hold enter as client
 - turns
+- if server dies clients should lose their connection
