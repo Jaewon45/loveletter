@@ -6,7 +6,7 @@ pkgs.mkShell {
     pkgs.gradle
     pkgs.vscode
     pkgs.code-cursor
-];
+  ];
   # Using openjdk17, maven, and gradle
   # so you can build and run your Java project in this shell.
 }
