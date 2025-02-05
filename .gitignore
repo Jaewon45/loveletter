@@ -1,5 +1,7 @@
 .gradle
 server/build
+server/bin
 client/build
+client/bin
 build
 gradle
