@@ -4,16 +4,24 @@ import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
 /**
- * Countess Wilhelmina (7) basically has no effect on discard;
+ * Countess Effect - Countess Wilhelmina (7).
  *
- * The real rule: if you ever hold the Countess + (King or Prince), you must
- * discard the Countess. That logic is typically enforced outside the 'apply'
- * method (e.g., in Game or the player's draw logic).
+ * <p>Discarding the Countess has no immediate effect. However, if you hold the Countess along with
+ * the King or Prince, you must discard the Countess. That rule is enforced elsewhere (e.g., during
+ * the draw or discard process).
  */
 public class CountessEffect implements Effect {
 
-    @Override
-    public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-        System.out.println("Countess: No immediate effect on discard.");
-    }
+  /**
+   * Applies the Countess card effect.
+   *
+   * @param game the current game instance
+   * @param currentPlayer the player who discarded the Countess
+   * @param targetPlayer unused for the Countess effect
+   * @param guess unused for the Countess effect
+   */
+  @Override
+  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+    System.out.println("Countess: No immediate effect on discard.");
+  }
 }

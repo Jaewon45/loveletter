@@ -4,28 +4,42 @@ import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
+/**
+ * Guard Effect - Guard Odette (1).
+ *
+ * <p>When you discard the Guard, choose a player and guess a card number (other than 1). If the
+ * target player's card matches your guess, they are knocked out of the round.
+ */
 public class GuardEffect implements Effect {
 
-    @Override
-    public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-        // Must name a value other than 1, guess in [2..8]
-        if (targetPlayer == null || guess < 2 || guess > 8) {
-            System.out.println("Guard: invalid guess or no target.");
-            return;
-        }
-        if (!targetPlayer.isAlive()) {
-            System.out.println("Guard: target is already knocked out.");
-            return;
-        }
-
-        // Check if the target's card matches guess
-        if (!targetPlayer.getHand().isEmpty()) {
-            Card theirCard = targetPlayer.getHand().get(0); // standard Love Letter is 1 card
-            if (theirCard.getValue() == guess) {
-                game.eliminatePlayer(targetPlayer);
-            } else {
-                System.out.println("Guard: Guess was incorrect!");
-            }
-        }
+  /**
+   * Applies the Guard card effect.
+   *
+   * @param game the current game instance
+   * @param currentPlayer the player who discarded the Guard
+   * @param targetPlayer the target player chosen for the guess
+   * @param guess the guessed card number (must be between 2 and 8)
+   */
+  @Override
+  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+    // Must name a value other than 1, guess in [2..8]
+    if (targetPlayer == null || guess < 2 || guess > 8) {
+      System.out.println("Guard: invalid guess or no target.");
+      return;
     }
+    if (!targetPlayer.isAlive()) {
+      System.out.println("Guard: target is already knocked out.");
+      return;
+    }
+
+    // Check if the target's card matches the guess
+    if (!targetPlayer.getHand().isEmpty()) {
+      Card theirCard = targetPlayer.getHand().get(0); // Standard Love Letter: 1 card per hand
+      if (theirCard.getValue() == guess) {
+        game.eliminatePlayer(targetPlayer);
+      } else {
+        System.out.println("Guard: Guess was incorrect!");
+      }
+    }
+  }
 }

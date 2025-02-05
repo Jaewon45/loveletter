@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id("net.ltgt.errorprone") version "4.1.0"
 }
 
 group = 'com.example.loveletter'
@@ -11,6 +12,7 @@ repositories {
 }
 
 dependencies {
+    errorprone("com.google.errorprone:error_prone_core:2.20.0")
 }
 
 import java.util.Properties
@@ -26,6 +28,10 @@ def serverHost = config.getProperty('server.host') ?: 'localhost'
 application {
     applicationDefaultJvmArgs = ["-Dserver.port=${serverPort}"]
     mainClass = 'com.example.loveletter.TCPClient'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.errorprone.disableWarningsInGeneratedCode.set(true)
 }
 
 run {

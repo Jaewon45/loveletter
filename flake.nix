@@ -15,8 +15,7 @@
         pkgs.openjdk21
         pkgs.maven
         pkgs.gradle
-        pkgs.vscode
-        pkgs.code-cursor
+        pkgs.google-java-format.out
       ];
       shellHook = ''
         code .

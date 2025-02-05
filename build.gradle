@@ -1,13 +1,44 @@
-subprojects {
-    apply plugin: 'java'
-    apply plugin: 'application'
+plugins {
+    id 'com.diffplug.spotless' version '6.18.0'
+    id 'checkstyle'
+    id 'pmd'
+    id 'com.github.spotbugs' version '5.0.13'
+    id 'java'
+    id 'application'
 }
 
+group = 'com.example.loveletter'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {}
+
+pmd {
+    toolVersion = '6.54.0'
+}
+
+spotless {
+    java {
+        target 'src/**/*.java'
+        googleJavaFormat('1.15.0')
+    }
+}
+
+checkstyle {
+    toolVersion = '10.3'
+    config = resources.text.fromFile('config/google_checks.xml')
+}
+
+// Task to run the server subproject
 task runServer(type: GradleBuild) {
     dir = 'server'
     tasks = ['run']
 }
 
+// Task to run the client subproject
 task runClient(type: GradleBuild) {
     dir = 'client'
     tasks = ['run']

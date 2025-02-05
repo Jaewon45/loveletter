@@ -1,65 +1,137 @@
-
 package com.example.loveletter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
-@SuppressWarnings("unused")
+/** Represents a player in the Love Letter game. */
 public class Player {
 
-    private final String nickname;
-    private List<Card> hand = new ArrayList<>();
-    private boolean alive = true;
-    private boolean protectedByHandmaid = false;
+  private final String nickname;
+  private final List<Card> hand;
+  private final List<Card> discardPile;
+  private boolean alive;
+  private boolean protectedByHandmaid;
 
-    public Player(String nickname) {
-        this.nickname = nickname;
-        this.hand = new ArrayList<>();
-        this.alive = true;               // By default, a new player starts alive
-        this.protectedByHandmaid = false;
+  /**
+   * Constructs a new Player with the given nickname.
+   *
+   * @param nickname the player's nickname
+   */
+  public Player(String nickname) {
+    this.nickname = nickname;
+    this.hand = new ArrayList<>();
+    this.discardPile = new ArrayList<>();
+    this.alive = true; // By default, a new player starts alive
+    this.protectedByHandmaid = false;
+  }
+
+  /**
+   * Adds a drawn Card to this player's hand.
+   *
+   * @param drawnCard the card drawn from the deck
+   */
+  public void addCard(Card drawnCard) {
+    hand.add(drawnCard);
+  }
+
+  /**
+   * Returns the player's nickname.
+   *
+   * @return the nickname of the player
+   */
+  public String getName() {
+    return nickname;
+  }
+
+  /**
+   * Returns the player's current hand.
+   *
+   * @return the list of cards in hand
+   */
+  public List<Card> getHand() {
+    return hand;
+  }
+
+  /**
+   * Checks whether the player is still alive in the current round.
+   *
+   * @return {@code true} if the player is alive, {@code false} otherwise
+   */
+  public boolean isAlive() {
+    return alive;
+  }
+
+  /**
+   * Sets the player's alive status.
+   *
+   * @param alive {@code true} if the player should be marked alive, {@code false} if knocked out
+   */
+  public void setAlive(boolean alive) {
+    this.alive = alive;
+  }
+
+  /**
+   * Checks if the player is protected by the Handmaid card.
+   *
+   * @return {@code true} if protected, {@code false} otherwise
+   */
+  public boolean isProtectedByHandmaid() {
+    return protectedByHandmaid;
+  }
+
+  /**
+   * Sets the player's Handmaid protection status.
+   *
+   * @param protectedByHandmaid {@code true} to enable protection, {@code false} to disable
+   */
+  public void setProtectedByHandmaid(boolean protectedByHandmaid) {
+    this.protectedByHandmaid = protectedByHandmaid;
+  }
+
+  /** Clears the player's Handmaid protection status. */
+  public void clearHandmaidProtection() {
+    this.protectedByHandmaid = false;
+  }
+
+  /** Clears the player's hand. */
+  public void clearHand() {
+    hand.clear();
+  }
+
+  /** Clears the player's discard pile. */
+  public void clearDiscardPile() {
+    discardPile.clear();
+  }
+
+  /**
+   * Adds a card to the player's discard pile.
+   *
+   * @param cardToDiscard the card to add to the discard pile
+   */
+  public void addToDiscardPile(Card cardToDiscard) {
+    discardPile.add(cardToDiscard);
+  }
+
+  /**
+   * Returns the sum of the values of all cards in the discard pile.
+   *
+   * @return the total value of discarded cards
+   */
+  public int getDiscardPileSum() {
+    int sum = 0;
+    for (Card card : discardPile) {
+      sum += card.getValue();
     }
+    return sum;
+  }
 
-    /**
-     * Adds a drawn Card to this player's hand.
-     *
-     * @param drawnCard The card drawn from the deck.
-     */
-    public void addCard(Card drawnCard) {
-        hand.add(drawnCard);
-    }
-
-    public String getName() {
-        return nickname;
-    }
-
-    public List<Card> getHand() {
-        return hand;
-    }
-
-    public boolean isAlive() {
-        return alive;
-    }
-
-    public void setAlive(boolean alive) {
-        this.alive = alive;
-    }
-
-    public boolean isProtectedByHandmaid() {
-        return protectedByHandmaid;
-    }
-
-    public void setProtectedByHandmaid(boolean protectedByHandmaid) {
-        this.protectedByHandmaid = protectedByHandmaid;
-    }
-
-    public void clearHandmaidProtection() {
-        this.protectedByHandmaid = false;
-    }
-
-    @Override
-    public String toString() {
-        return nickname + (alive ? "" : " (knocked out)");
-    }
-
+  /**
+   * Returns a string representation of the player.
+   *
+   * @return the player's nickname with a marker if knocked out
+   */
+  @Override
+  public String toString() {
+    return nickname + (alive ? "" : " (knocked out)");
+  }
 }

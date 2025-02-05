@@ -1,251 +1,324 @@
 package com.example.loveletter;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-@SuppressWarnings({ "CallToPrintStackTrace", "unused" })
+/**
+ * TCPServer handles incoming client connections and game/chat commands.
+ *
+ * <p>The server listens on a specified port (default: 12345) for client connections. Clients must
+ * send a unique nickname upon connecting. The server supports broadcast chat, direct messaging, and
+ * game commands (e.g., create, join, start, play a card, and show score).
+ */
+@SuppressWarnings("CallToPrintStackTrace")
 public class TCPServer {
 
-    private static Game game = null;
+  private static final Logger LOGGER = Logger.getLogger(TCPServer.class.getName());
 
-    private static final int SERVER_PORT = Integer.parseInt(System.getProperty("server.port", "12345"));
-    private static final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
+  /**
+   * Port on which the server listens (default: 12345, can be overridden via system property
+   * "server.port").
+   */
+  private static final int PORT = Integer.parseInt(System.getProperty("server.port", "12345"));
 
-    private static boolean gameStarted = false;
-    private static ClientHandler hostClient = null; // To keep track of the host
+  /**
+   * Map holding connected clients by nickname.
+   *
+   * <p>This map is synchronized to allow thread-safe access.
+   */
+  private static final Map<String, ClientHandler> clients =
+      Collections.synchronizedMap(new HashMap<>());
 
-    public static void main(String[] args) {
-        try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
-            System.out.println("Server started on port " + SERVER_PORT);
+  /**
+   * The currently active game.
+   *
+   * <p>If no game is active, this will be {@code null}.
+   */
+  private static volatile Game currentGame = null;
 
-            ExecutorService executor = Executors.newCachedThreadPool();
+  /**
+   * The main method starts the server and listens for incoming connections.
+   *
+   * @param args command-line arguments (not used)
+   */
+  public static void main(String[] args) {
+    try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+      System.out.println("Server running on port " + PORT);
+      while (true) {
+        Socket socket = serverSocket.accept();
+        new Thread(new ClientHandler(socket)).start();
+      }
+    } catch (IOException ex) {
+      LOGGER.log(Level.SEVERE, "Server exception", ex);
+    }
+  }
 
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                executor.execute(new ClientHandler(clientSocket));
+  /**
+   * Broadcasts a message to all connected clients except an optionally excluded client.
+   *
+   * @param message the message to broadcast
+   * @param exclude the client to exclude from receiving the message, or {@code null} to send to all
+   */
+  static void broadcast(String message, ClientHandler exclude) {
+    synchronized (clients) {
+      for (ClientHandler client : clients.values()) {
+        if (client != exclude) {
+          client.send(message);
+        }
+      }
+    }
+  }
+
+  /**
+   * Sends a direct message to a specific client identified by nickname.
+   *
+   * @param recipient the nickname of the client to send the message to
+   * @param message the message to send
+   * @return {@code true} if the message was successfully sent; {@code false} if the recipient was
+   *     not found
+   */
+  static boolean sendDirect(String recipient, String message) {
+    ClientHandler client = clients.get(recipient);
+    if (client != null) {
+      client.send(message);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Handles communication with a connected client.
+   *
+   * <p>This inner class processes incoming messages and commands from the client.
+   */
+  static class ClientHandler implements Runnable {
+
+    /** The socket associated with this client. */
+    private final Socket socket;
+
+    /** The nickname chosen by the client. */
+    private String nickname;
+
+    /** Writer used to send messages to the client. */
+    private PrintWriter out;
+
+    /** Reader used to receive messages from the client. */
+    private BufferedReader in;
+
+    /**
+     * Constructs a ClientHandler for the specified socket.
+     *
+     * @param socket the socket associated with the client
+     */
+    ClientHandler(Socket socket) {
+      this.socket = socket;
+    }
+
+    /**
+     * Runs the client handler thread.
+     *
+     * <p>This method handles the initial handshake (receiving the nickname), processes incoming
+     * messages, handles commands, and ensures proper cleanup on disconnection.
+     */
+    @Override
+    public void run() {
+      try {
+        in =
+            new BufferedReader(
+                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+        out =
+            new PrintWriter(
+                new BufferedWriter(
+                    new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
+                true);
+
+        // First message must be the nickname.
+        nickname = in.readLine();
+        if (nickname == null || nickname.trim().isEmpty()) {
+          socket.close();
+          return;
+        }
+        synchronized (clients) {
+          if (clients.containsKey(nickname)) {
+            try (socket) {
+              out.println("Nickname already in use. Connection closed.");
             }
+            return;
+          }
+          clients.put(nickname, this);
+        }
+        out.println("welcome " + nickname);
+        broadcast(nickname + " joined the room", this);
+
+        String message;
+        while ((message = in.readLine()) != null) {
+          if ("bye".equalsIgnoreCase(message.trim())) {
+            break;
+          }
+          if (message.startsWith("/")) {
+            // Process command messages.
+            processCommand(message);
+          } else {
+            // Regular chat message.
+            broadcast(nickname + ": " + message, null);
+          }
+        }
+      } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "Error in client handler", e);
+      } finally {
+        try {
+          socket.close();
         } catch (IOException e) {
-            System.err.println("I/O error: " + e.getMessage());
+          LOGGER.log(Level.SEVERE, "Error in client handler", e);
         }
+        synchronized (clients) {
+          clients.remove(nickname);
+        }
+        if (nickname != null && !nickname.isEmpty()) {
+          broadcast(nickname + " left the room", null);
+        }
+      }
     }
 
-    private static class ClientHandler implements Runnable {
-
-        private final Socket socket;
-        private String nickname;
-        private LocalDate lastDate;
-        private PrintWriter out;
-        private boolean isHost = false;
-        private BufferedReader in;
-
-        public ClientHandler(Socket socket) {
-            this.socket = socket;
-        }
-
-        @Override
-        public void run() {
-            System.out.println("Client connected: " + socket.getInetAddress());
-            try {
-                // Initialize streams outside the try-with-resources to keep them open
-                this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                this.out = new PrintWriter(socket.getOutputStream(), true);
-
-                // Login process
-                while (true) {
-                    out.println("Enter your nickname:");
-                    nickname = in.readLine();
-
-                    if (nickname == null || nickname.trim().isEmpty() || clients.containsKey(nickname)) {
-                        out.println("ERROR: Nickname is invalid or already in use.");
-                    } else {
-                        synchronized (clients) {
-                            clients.put(nickname, this);
-                            // Assign host only if it's the first user
-                            if (clients.size() == 1) {
-                                hostClient = this;
-                                isHost = true;
-                            }
-                        }
-                        out.println("WELCOME: " + nickname);
-                        broadcast("BROADCAST: " + nickname + " joined the room.", null);
-                        break;
-                    }
-                }
-
-                // Handle last date input
-                handleLastDateInput(in);
-
-                if (isHost) {
-                    out.println("INFO: You are the host. Type 'START' to begin the game when ready.");
-                }
-
-                // Main message handling loop
-                String message;
-                while ((message = in.readLine()) != null) {
-                    if (message.equalsIgnoreCase("BYE")) {
-                        out.println("INFO: Disconnecting from the server...");
-                        break;
-                    } else if (isHost && message.equalsIgnoreCase("START")) {
-                        handleStartCommand(in);
-                    } else {
-                        broadcast("BROADCAST: " + nickname + ": " + message, nickname);
-                    }
-                }
-
-            } catch (IOException e) {
-                System.err.println("I/O error with client " + nickname + ": " + e.getMessage());
-            } finally {
-                disconnect(); // Ensure disconnect is called in finally block
+    /**
+     * Processes a command message sent by the client.
+     *
+     * <p>Supported commands include:
+     *
+     * <ul>
+     *   <li><code>/dm &lt;recipient&gt; &lt;message&gt;</code> - Sends a direct message.
+     *   <li><code>/create</code> - Creates a new game and adds the creator as a player.
+     *   <li><code>/join</code> - Joins an existing game (if not started).
+     *   <li><code>/start</code> - Starts the game if there are 2-4 players.
+     *   <li><code>/play &lt;card&gt; [target guess]</code> - Plays a card during an active game.
+     *   <li><code>/score</code> - Shows the current scores to the requesting client.
+     * </ul>
+     *
+     * @param message the command message received from the client
+     */
+    private void processCommand(String message) {
+      String[] tokens = message.split(" ", 3);
+      String command = tokens[0];
+      switch (command) {
+        case "/dm" -> {
+          // Direct message: /dm recipient message.
+          if (tokens.length < 3) {
+            send("Error: Usage /dm <recipient> <message>");
+          } else {
+            String recipient = tokens[1];
+            String dmMessage = "(DM from " + nickname + "): " + tokens[2];
+            if (!TCPServer.sendDirect(recipient, dmMessage)) {
+              send("Error: Recipient '" + recipient + "' not found.");
             }
+          }
         }
-
-        private void handleLastDateInput(BufferedReader in) throws IOException {
-            while (true) {
-                out.println("When was your last date (YYYY-MM-DD):");
-                String dateInput = "2024-01-01";// in.readLine();
-
-                if (dateInput == null || dateInput.trim().isEmpty()) {
-                    out.println("ERROR: Date cannot be empty.");
-                    continue;
-                }
-
-                try {
-                    lastDate = LocalDate.parse(dateInput.trim());
-                    out.println("RECEIVED: Last date set to " + lastDate);
-                    break;
-                } catch (DateTimeParseException e) {
-                    out.println("ERROR: Invalid date format. Please use YYYY-MM-DD.");
-                }
+        case "/create" -> {
+          // Create a new game. Automatically adds the creator.
+          if (currentGame != null) {
+            send("Error: A game is already active.");
+          } else {
+            currentGame = new Game();
+            if (currentGame.addPlayer(nickname)) {
+              broadcast("Game created by " + nickname, null);
+            } else {
+              send("Error: Unable to create game.");
             }
+          }
         }
-
-        private void handleStartCommand(BufferedReader in) throws IOException {
-            synchronized (TCPServer.class) {
-                if (gameStarted) {
-                    out.println("ERROR: Game has already started.");
-                    return;
-                }
-
-                int clientCount = clients.size();
-                if (clientCount < 2) {
-                    out.println("ERROR: At least 2 players are required to start the game.");
-                    return;
-                }
-                if (clientCount > 8) {
-                    out.println("ERROR: Maximum of 8 players allowed.");
-                    return;
-                }
-
-                String[] playerNames = clients.values().stream()
-                        .sorted((c1, c2) -> c1.lastDate.compareTo(c2.lastDate))
-                        .map(c -> c.nickname)
-                        .toArray(String[]::new);
-                game = new Game(playerNames);
-                gameStarted = true;
-
-                broadcast("GAME: The game has started with players: " + String.join(", ", playerNames), null);
-                System.out.println("Game has been initialized by " + nickname);
-
-                try {
-                    // Main game loop
-                    while (true) {
-                        if (!game.nextRound()) {
-                            broadcast("GAME: Game has ended!", null);
-                            break;
-                        }
-
-                        String currentPlayerName = game.getCurrentPlayer().getName();
-                        ClientHandler currentPlayerHandler = clients.get(currentPlayerName);
-
-                        if (currentPlayerHandler != null) {
-                            List<Card> cards = game.getCurrentPlayer().getHand();
-                            currentPlayerHandler.out.println("Your turn!");
-                            currentPlayerHandler.out.println("You have the following cards: " + cards.get(0).getName()
-                                    + " & " + cards.get(1).getName());
-                            currentPlayerHandler.out.println("Their effects are: ");
-                            for (Card card : cards) {
-                                currentPlayerHandler.out.println("\u001B[34m" + card.getDescription() + "\u001B[0m");
-                            }
-                            currentPlayerHandler.out
-                                    .println("INFO: Choose a card to play - type \"A\" or \"B\" to choose "
-                                            + cards.get(0).getName() + " and " + cards.get(1).getName()
-                                            + " respectively");
-
-                            // Broadcast game state to other players
-                            broadcast("GAME: It's " + currentPlayerName + "'s turn!", currentPlayerName);
-
-                            // Wait for player's move
-                            String move = currentPlayerHandler.in.readLine();
-                            if (move == null) {
-                                broadcast("GAME: " + currentPlayerName + " disconnected!", null);
-                                break;
-                            }
-                            // TODO: Process the move and update game state
-
-                            // For now, just broadcast the move
-                            broadcast("GAME: " + currentPlayerName + " played their card!", null);
-                        }
-                    }
-                } finally {
-                    gameStarted = false;
-                }
+        case "/join" -> {
+          // Join an existing game (if not started).
+          if (currentGame == null) {
+            send("Error: No game available. Create one with /create.");
+          } else if (currentGame.isStarted()) {
+            send("Error: Game already started.");
+          } else {
+            if (currentGame.addPlayer(nickname)) {
+              broadcast(nickname + " joined the game", null);
+            } else {
+              send("Error: Unable to join game.");
             }
+          }
         }
-
-        private void disconnect() {
-            try {
-                if (nickname != null) {
-                    synchronized (clients) {
-                        clients.remove(nickname);
-                        broadcast("BROADCAST: " + nickname + " left the room.", null);
-                    }
-                }
-
-                if (isHost) {
-                    synchronized (TCPServer.class) {
-                        if (!clients.isEmpty()) {
-                            ClientHandler newHost = clients.values().iterator().next();
-                            newHost.isHost = true;
-                            hostClient = newHost;
-                            newHost.out.println(
-                                    "INFO: The previous host has disconnected. You are now the host. Type 'START' to begin the game.");
-                        } else {
-                            hostClient = null;
-                        }
-                    }
-                }
-
-                if (in != null)
-                    in.close();
-                if (out != null)
-                    out.close();
-                if (socket != null && !socket.isClosed())
-                    socket.close();
-            } catch (IOException e) {
-                System.err.println("Error during disconnect for " + nickname + ": " + e.getMessage());
+        case "/start" -> {
+          // Start the game if player count is between 2 and 4.
+          if (currentGame == null) {
+            send("Error: No game to start.");
+          } else if (currentGame.isStarted()) {
+            send("Error: Game already started.");
+          } else if (currentGame.getPlayerCount() < 2 || currentGame.getPlayerCount() > 4) {
+            send("Error: Need between 2 and 4 players to start the game.");
+          } else {
+            currentGame.start();
+            broadcast("Game started!", null);
+            // Additional game notifications (e.g., indicating whose turn it is) should be handled
+            // in the Game class.
+          }
+        }
+        case "/play" -> {
+          // Play a card command: /play <card> [target guess]
+          if (currentGame == null || !currentGame.isStarted()) {
+            send("Error: No active game in progress.");
+            break;
+          }
+          if (tokens.length < 2) {
+            send("Error: Usage /play <card> [target guess]");
+            break;
+          }
+          String cardName = tokens[1];
+          String target = null;
+          int guess = -1;
+          if (tokens.length >= 3) {
+            // Expecting target and optionally a guess value.
+            String[] params = tokens[2].split(" ");
+            if (params.length >= 1) {
+              target = params[0];
             }
-        }
-
-        private void broadcast(String message, String excludeUser) {
-            System.out.println(message);
-            synchronized (clients) {
-                clients.forEach((name, handler) -> {
-                    if (excludeUser == null || !name.equals(excludeUser)) {
-                        handler.out.println(message);
-                    }
-                });
+            if (params.length >= 2) {
+              try {
+                guess = Integer.parseInt(params[1]);
+              } catch (NumberFormatException e) {
+                send("Error: Guess must be an integer.");
+                break;
+              }
             }
+          }
+          // Call the game logic to play a card.
+          boolean success = currentGame.playCard(nickname, cardName, target, guess);
+          if (!success) {
+            send("Error: Unable to play card " + cardName + ". Check your inputs and game state.");
+          }
         }
+        case "/score" -> {
+          // Show scores to the requesting player.
+          if (currentGame == null) {
+            send("Error: No game active.");
+          } else {
+            send("Scores: " + currentGame.getScores());
+          }
+        }
+        default -> send("Error: Unknown command.");
+      }
     }
+
+    /**
+     * Sends a message to the client.
+     *
+     * @param message the message to send
+     */
+    void send(String message) {
+      out.println(message);
+    }
+  }
 }
