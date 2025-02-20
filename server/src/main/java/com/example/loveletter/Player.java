@@ -32,6 +32,7 @@ public class Player {
    */
   public void addCard(Card drawnCard) {
     hand.add(drawnCard);
+    TCPServer.sendDirect(getName(), drawnCard.toString() + " was added to your hand.");
   }
 
   /**

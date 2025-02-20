@@ -37,11 +37,8 @@ public class PrinceEffect implements Effect {
 
     // If target is still alive, draw a new card
     if (targetPlayer.isAlive()) {
-      Card newCard = game.getDeck().draw();
-      if (newCard != null) {
-        targetPlayer.addCard(newCard);
-        TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.", null);
-      }
+      game.getDeck().draw(targetPlayer);
+      TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.", null);
       return true;
     }
     return false;

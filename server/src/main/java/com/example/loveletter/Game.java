@@ -105,23 +105,16 @@ public class Game {
     started = true;
     round = 1;
     deck = new Deck(players.size());
-    // Remove the top card (face-down card)
-    deck.draw();
-    // For 2-player game, remove three additional cards (face-up cards)
-    if (players.size() == 2) {
-      deck.draw();
-      deck.draw();
-      deck.draw();
-    }
     // Reset all players for the new round
     for (Player p : players) {
       p.clearHand();
       p.clearDiscardPile();
       p.setAlive(true);
-      p.addCard(deck.draw());
+      deck.draw(p);
     }
     // Set first player (for simplicity, index 0)
     currentPlayerIndex = 0;
+    deck.draw(getCurrentPlayer());
   }
 
   /**
@@ -160,7 +153,7 @@ public class Game {
     } while (!players.get(currentPlayerIndex).isAlive());
     // Current player draws a card if available.
     if (!deck.isEmpty()) {
-      players.get(currentPlayerIndex).addCard(deck.draw());
+      deck.draw(players.get(currentPlayerIndex));
       checkCountessRule(players.get(currentPlayerIndex));
     }
     return true;
@@ -290,6 +283,9 @@ public class Game {
       scores.put(roundWinner.getName(), scores.get(roundWinner.getName()) + 1);
     }
     round++;
+
+    TCPServer.broadcast("Starting new Round", null);
+
     // Prepare for a new round: reset player statuses and clear hands/discard piles.
     for (Player p : players) {
       p.setAlive(true);
@@ -297,17 +293,9 @@ public class Game {
       p.clearDiscardPile();
     }
     deck.reset();
-    // Remove the top card (face-down card)
-    deck.draw();
-    // For 2-player game, remove three additional cards.
-    if (players.size() == 2) {
-      deck.draw();
-      deck.draw();
-      deck.draw();
-    }
     // Deal one card to each player.
     for (Player p : players) {
-      p.addCard(deck.draw());
+      deck.draw(p);
     }
     // The round winner starts the next round (or default to index 0 if no winner).
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
@@ -348,18 +336,15 @@ public class Game {
    * @param cardName the name of the card to be played
    * @param target the nickname of the target player (may be {@code null} or empty if not required)
    * @param guess an additional parameter used by some card effects (e.g., Guard)
-   * @return {@code true} if the card was successfully played; {@code false} otherwise
    */
-  boolean playCard(String nickname, String cardName, String target, int guess) {
+  void playCard(String nickname, String cardName, String target, int guess) throws Exception {
     // Locate the player by nickname.
-    Player player = getPlayerByNickname(target);
+    Player player = getPlayerByNickname(nickname);
     if (player == null) {
-      System.err.println("Internal Error: Player '" + nickname + "' not found.");
-      return false;
+      throw new Exception("Internal Error: Player '" + nickname + "' not found.");
     }
     if (!player.isAlive()) {
-      System.err.println("Internal Error: Player '" + target + "' is not alive.");
-      return false;
+      throw new Exception("Internal Error: Player '" + nickname + "' is not alive.");
     }
 
     // Search for the card in the player's hand (case-insensitive comparison).
@@ -372,7 +357,7 @@ public class Game {
     }
     if (cardToPlay == null) {
       TCPServer.sendDirect(nickname, "Error: Card '" + cardName + "' not found in your hand.");
-      return false;
+      throw new Exception("Error: Card '" + cardName + "' not found in player's hand.");
     }
 
     // If a target is specified, attempt to locate the target player.
@@ -381,21 +366,19 @@ public class Game {
       targetPlayer = getPlayerByNickname(target);
       if (targetPlayer == null) {
         TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
-        return false;
+        throw new Exception("Error: Target Player '" + target + "' not found.");
       }
     }
 
     // Discard the card, which applies its effect.
     boolean legal = discardCard(player, cardToPlay, targetPlayer, guess);
     if (!legal) {
-      return false;
+      throw new Exception("Internal Error: Illegal move with " + cardToPlay.getName() + "!");
     }
 
     // Advance the turn. Note: if the round ends (e.g. deck empty or only one player alive),
     // nextTurn() will call endRound(), and turn advancement is not applicable.
     nextTurn();
-
-    return true;
   }
 
   String getHand(String nickname) {

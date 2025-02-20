@@ -48,6 +48,9 @@ public class KingEffect implements Effect {
               + targetPlayer.getName()
               + ". Your new card: "
               + theirCard);
+      TCPServer.sendDirect(
+          targetPlayer.getName(),
+          "King: You swapped hands with " + currentPlayer.getName() + ". Your new card: " + myCard);
       return true;
     }
     return false;

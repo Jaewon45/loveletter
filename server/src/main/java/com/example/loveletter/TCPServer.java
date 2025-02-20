@@ -72,6 +72,7 @@ public class TCPServer {
    * @param exclude the client to exclude from receiving the message, or {@code null} to send to all
    */
   public static void broadcast(String message, ClientHandler exclude) {
+    System.out.println("Broadcasting: " + message);
     synchronized (clients) {
       for (ClientHandler client : clients.values()) {
         if (client != exclude) {
@@ -90,6 +91,7 @@ public class TCPServer {
    *     not found
    */
   public static boolean sendDirect(String recipient, String message) {
+    System.out.println("Sending DM to " + recipient + ": " + message);
     ClientHandler client = clients.get(recipient);
     if (client != null) {
       client.send(message);
@@ -295,9 +297,11 @@ public class TCPServer {
             }
           }
           // Call the game logic to play a card.
-          boolean success = currentGame.playCard(nickname, cardName, target, guess);
-          if (!success) {
-            send("Error: Unable to play card " + cardName + ". Check your inputs and game state.");
+          try {
+
+            currentGame.playCard(nickname, cardName, target, guess);
+          } catch (Exception e) {
+            send("Error: Unable to play card " + cardName + " : " + e.toString());
           }
         }
         case "/score" -> {

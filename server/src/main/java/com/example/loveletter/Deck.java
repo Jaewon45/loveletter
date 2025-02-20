@@ -7,9 +7,9 @@ import java.util.List;
 /** Represents the deck of cards used in the Love Letter game. */
 public final class Deck {
 
-  private final List<Card> cards = new ArrayList<>();
+  private List<Card> cards = new ArrayList<>();
   private final int numberOfPlayers;
-  private final Card[] removedCards = new Card[3];
+  private Card[] removedCards = new Card[3];
 
   /**
    * Constructs a new deck based on the number of players.
@@ -57,11 +57,12 @@ public final class Deck {
    * @return the drawn {@link Card}
    * @throws IllegalStateException if the deck is empty
    */
-  public Card draw() {
+  public void draw(Player player) {
     if (cards.isEmpty()) {
       throw new IllegalStateException("Deck is empty.");
     }
-    return cards.remove(cards.size() - 1);
+    Card drawnCard = cards.remove(cards.size() - 1);
+    player.addCard(drawnCard);
   }
 
   /**
@@ -103,27 +104,12 @@ public final class Deck {
   /**
    * Resets the deck for a new round.
    *
-   * <p>The deck is cleared and reinitialized using the same rules as in the constructor, then
-   * shuffled.
+   * <p>The deck is reinitialized using the same rules as in the constructor
    */
   public void reset() {
-    cards.clear();
-    initDeck();
-    if (numberOfPlayers > 4) {
-      initDeck();
-    }
-    shuffle();
-
-    int cardsToRemove =
-        switch (numberOfPlayers) {
-          case 2 -> 4;
-          case 3, 4, 5, 6, 7, 8 -> 1;
-          default -> throw new AssertionError("Invalid number of players: " + numberOfPlayers);
-        };
-
-    for (int i = 0; i < cardsToRemove; i++) {
-      cards.remove(cards.size() - 1);
-    }
+    Deck deck = new Deck(numberOfPlayers);
+    this.cards = deck.cards;
+    this.removedCards = deck.removedCards;
   }
 
   public Card[] getRemovedCards() {
