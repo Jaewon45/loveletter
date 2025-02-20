@@ -3,6 +3,7 @@ package com.example.loveletter.effect;
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Baron Effect - Baron Talus (3).
@@ -22,17 +23,17 @@ public class BaronEffect implements Effect {
    * @param guess unused for the Baron effect
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      System.out.println("Baron: No valid target.");
-      return;
+      TCPServer.sendDirect(currentPlayer.getName(), "Baron: No valid target.");
+      return false;
     }
     // Compare card values
     if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
-      Card myCard = currentPlayer.getHand().get(0);
-      Card theirCard = targetPlayer.getHand().get(0);
+      Card myCard = currentPlayer.getLowest();
+      Card theirCard = targetPlayer.getLowest();
 
-      System.out.println(
+      String message =
           "Baron: "
               + currentPlayer.getName()
               + " ("
@@ -41,14 +42,20 @@ public class BaronEffect implements Effect {
               + targetPlayer.getName()
               + " ("
               + theirCard.getValue()
-              + ")");
+              + ")";
+
+      TCPServer.sendDirect(currentPlayer.getName(), message);
+      TCPServer.sendDirect(targetPlayer.getName(), message);
+
       if (myCard.getValue() > theirCard.getValue()) {
         game.eliminatePlayer(targetPlayer);
       } else if (myCard.getValue() < theirCard.getValue()) {
         game.eliminatePlayer(currentPlayer);
       } else {
-        System.out.println("Baron: Tie => nothing happens.");
+        TCPServer.broadcast("Baron: Tie => nothing happens.", null);
       }
+      return true;
     }
+    return false;
   }
 }

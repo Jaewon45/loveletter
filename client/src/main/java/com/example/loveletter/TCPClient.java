@@ -78,10 +78,10 @@ public class TCPClient {
       // Main thread: read user input from the console and send it to the server.
       String userInput;
       while ((userInput = consoleReader.readLine()) != null) {
-        out.println(userInput);
         if ("bye".equalsIgnoreCase(userInput.trim())) {
-          break;
+          System.exit(0);
         }
+        out.println(userInput);
       }
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "An I/O error occurred", ex);

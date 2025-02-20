@@ -6,7 +6,7 @@ import com.example.loveletter.Player;
 /**
  * Represents the special power of a card.
  *
- * <p>Each card’s unique effect is implemented by a class that implements this interface. The effect
+ * <p>Each card's unique effect is implemented by a class that implements this interface. The effect
  * is applied when the card is discarded (unless otherwise noted by special rules).
  */
 public interface Effect {
@@ -19,5 +19,5 @@ public interface Effect {
    * @param targetPlayer another player chosen as the target (may be null)
    * @param guess used by certain card effects (e.g., Guard), otherwise -1
    */
-  void apply(Game game, Player currentPlayer, Player targetPlayer, int guess);
+  boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess);
 }

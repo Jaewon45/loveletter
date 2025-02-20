@@ -113,6 +113,15 @@ public class Player {
   }
 
   /**
+   * Returns the player's discard pile.
+   *
+   * @return the list of cards in the discard pile
+   */
+  public List<Card> getDiscardPile() {
+    return discardPile;
+  }
+
+  /**
    * Returns the sum of the values of all cards in the discard pile.
    *
    * @return the total value of discarded cards
@@ -133,5 +142,19 @@ public class Player {
   @Override
   public String toString() {
     return nickname + (alive ? "" : " (knocked out)");
+  }
+
+  /** Returns the card with the lowest value in the player's hand. */
+  public Card getLowest() {
+    if (hand.isEmpty()) {
+      return null;
+    }
+    Card lowest = hand.get(0);
+    for (Card card : hand) {
+      if (card.getValue() < lowest.getValue()) {
+        lowest = card;
+      }
+    }
+    return lowest;
   }
 }

@@ -22,8 +22,8 @@ public class PrincessEffect implements Effect {
    *     player
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-    throw new RuntimeException(
-        "Princess: Should not call apply since discarding the Princess eliminates the player.");
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+    game.eliminatePlayer(currentPlayer);
+    return true;
   }
 }

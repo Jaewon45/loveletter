@@ -1,14 +1,24 @@
 package com.example.loveletter;
 
+import com.example.loveletter.effect.AssassinEffect;
 import com.example.loveletter.effect.BaronEffect;
+import com.example.loveletter.effect.BaronessEffect;
+import com.example.loveletter.effect.BishopEffect;
+import com.example.loveletter.effect.CardinalEffect;
+import com.example.loveletter.effect.ConstableEffect;
+import com.example.loveletter.effect.CountEffect;
 import com.example.loveletter.effect.CountessEffect;
+import com.example.loveletter.effect.DowagerQueenEffect;
 import com.example.loveletter.effect.Effect;
 import com.example.loveletter.effect.GuardEffect;
 import com.example.loveletter.effect.HandmaidEffect;
+import com.example.loveletter.effect.JesterEffect;
 import com.example.loveletter.effect.KingEffect;
 import com.example.loveletter.effect.PriestEffect;
 import com.example.loveletter.effect.PrinceEffect;
 import com.example.loveletter.effect.PrincessEffect;
+import com.example.loveletter.effect.SycophantEffect;
+import java.util.Locale;
 
 /**
  * Enumeration representing the cards in the Love Letter game.
@@ -125,7 +135,142 @@ public enum Card {
           + " effect, any remaining effects of that card do not apply (you do not draw a card from"
           + " the Prince, for example). Effects tied to being knocked out the round still apply"
           + " (e.g., Constable, Jester), however.",
-      new PrincessEffect());
+      new PrincessEffect()),
+
+  /**
+   * Bishop card.
+   *
+   * <p>When discarded, the player names a number and a player. If the player has that number in
+   * their hand, the player gets a Token of Affection. If this would give the player enough Tokens
+   * to win the game, then the player wins immediately and the game ends. If the player gained a
+   * Token of Affection from this effect, then the player whose card was revealed with the Bishop
+   * may discard their card (but doesn't apply its effects, unless it is the Princess) and draw a
+   * new one.
+   */
+  BISHOP(
+      9,
+      "Bishop",
+      "When you discard the Bishop, name a number and a player. If the player has that number in"
+          + " their hand, you get a Token of Affection. If this would give you enough Tokens to win"
+          + " the game, then you win immediately and the game ends. If you gained a Token of"
+          + " Affection from this effect, then the player whose card you effectively revealed with"
+          + " the Bishop may discard their card (but doesn't apply its effects, unless it is the"
+          + " Princess) and draw a new one.",
+      new BishopEffect()),
+
+  /**
+   * Dowager Queen card.
+   *
+   * <p>When discarded, the player compares the card in hand with another player; the higher value
+   * loses.
+   */
+  DOWAGER_QUEEN(
+      7,
+      "Dowager Queen",
+      "When you discard the Dowager Queen, choose another player still in the round. You and that"
+          + " player secretly compare your hands. The player with the higher number is knocked out"
+          + " of the round. In case of a tie, nothing happens.",
+      new DowagerQueenEffect()),
+
+  /**
+   * Constable card.
+   *
+   * <p>The Constable's effect applies when the player is knocked out of the round with it in their
+   * discard pile.
+   */
+  CONSTABLE(
+      6,
+      "Constable",
+      "The Constable's effect applies when you are knocked out of the round with it in your discard"
+          + " pile. Show the Constable, then claim a Token of Affection. If this would give you"
+          + " enough Tokens to win the game, then you win immediately and the game ends.",
+      new ConstableEffect()),
+
+  /**
+   * Count card.
+   *
+   * <p>When the round ends, if it is necessary to check the number in the players' hands to
+   * determine a winner, the Count will increase that number by 1.
+   */
+  COUNT(
+      5,
+      "Count",
+      "When the round ends, if it is necessary to check the number in the players' hands to"
+          + " determine a winner, the Count will increase that number by 1. Note that this stacks,"
+          + " so if you have both copies of the Count in your discard pile, the number will"
+          + " increase by 2.",
+      new CountEffect()),
+
+  /**
+   * Sycophant card.
+   *
+   * <p>When discarded, the player chooses a player. The next card played must choose the chosen
+   * player if it has an effect that chooses one or more players.
+   */
+  SYCOPHANT(
+      4,
+      "Sycophant",
+      "When you discard the Sycophant, choose a player (including yourself). Then, as long as the"
+          + " next card played has an effect that chooses one or more players, it has to at least"
+          + " choose the player you chose with the Sycophant.",
+      new SycophantEffect()),
+
+  /**
+   * Baroness card.
+   *
+   * <p>When discarded, the player may look at the hands of either 1 or 2 other players without
+   * revealing them to others.
+   */
+  BARONESS(
+      3,
+      "Baroness",
+      "When you discard the Baroness, you can look at the hands of either 1 or 2 other players. Do"
+          + " not reveal them to any other players.",
+      new BaronessEffect()),
+
+  /**
+   * Cardinal card.
+   *
+   * <p>When discarded, the player chooses exactly 2 players who will switch hands. The player may
+   * then look at one of the hands without revealing it to others.
+   */
+  CARDINAL(
+      2,
+      "Cardinal",
+      "When you discard the Cardinal, choose exactly 2 players (you may include yourself), who will"
+          + " switch hands. Then, once the hands are switched, you may look at one of them without"
+          + " revealing it to any other players.",
+      new CardinalEffect()),
+
+  /**
+   * Jester card.
+   *
+   * <p>When discarded, the player chooses another player. If the chosen player wins the round, the
+   * player gains a Token of Affection.
+   */
+  JESTER(
+      0,
+      "Jester",
+      "When you discard the Jester, choose another player—ideally, the one you believe is most"
+          + " likely to win the round. If you're correct, and your chosen player does win the"
+          + " round, you gain a Token of Affection. If this would give you enough Tokens to win the"
+          + " game, then you win immediately and the game ends.",
+      new JesterEffect()),
+
+  /**
+   * Assassin card.
+   *
+   * <p>The Assassin's effect applies while it is in the player's hand. If another player chooses
+   * the player when playing a Guard, the Guard's player is eliminated from the round.
+   */
+  ASSASSIN(
+      0,
+      "Assassin",
+      "If another player chooses you when playing a Guard, then regardless of what number that"
+          + " player named (even 0!), when you reveal the Assassin (to all players), the Guard's"
+          + " player is eliminated from the round, while you are not. After you've resolved the"
+          + " Assassin's effect, you must discard him and draw a new card.",
+      new AssassinEffect());
 
   private final int value;
   private final String name;
@@ -145,6 +290,29 @@ public enum Card {
     this.name = name;
     this.description = description;
     this.effect = effect;
+  }
+
+  public static Card getCard(String name) {
+    return switch (name.toLowerCase(Locale.ENGLISH)) {
+      case "guard" -> GUARD;
+      case "priest" -> PRIEST;
+      case "baron" -> BARON;
+      case "handmaid" -> HANDMAID;
+      case "prince" -> PRINCE;
+      case "king" -> KING;
+      case "countess" -> COUNTESS;
+      case "princess" -> PRINCESS;
+      case "bishop" -> BISHOP;
+      case "dowager queen" -> DOWAGER_QUEEN;
+      case "constable" -> CONSTABLE;
+      case "count" -> COUNT;
+      case "sycophant" -> SYCOPHANT;
+      case "baroness" -> BARONESS;
+      case "cardinal" -> CARDINAL;
+      case "jester" -> JESTER;
+      case "assassin" -> ASSASSIN;
+      default -> null;
+    };
   }
 
   /**

@@ -3,6 +3,7 @@ package com.example.loveletter.effect;
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Prince Effect - Prince (5).
@@ -22,10 +23,10 @@ public class PrinceEffect implements Effect {
    * @param guess unused for the Prince effect
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      System.out.println("Prince: No valid target or target is out.");
-      return;
+      TCPServer.sendDirect(currentPlayer.getName(), "Prince: No valid target or target is out.");
+      return false;
     }
     // Force discard
     if (!targetPlayer.getHand().isEmpty()) {
@@ -39,8 +40,10 @@ public class PrinceEffect implements Effect {
       Card newCard = game.getDeck().draw();
       if (newCard != null) {
         targetPlayer.addCard(newCard);
-        System.out.println("Prince: " + targetPlayer.getName() + " draws a new card.");
+        TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.", null);
       }
+      return true;
     }
+    return false;
   }
 }

@@ -2,6 +2,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Handmaid Effect - Handmaid (4).
@@ -20,9 +21,10 @@ public class HandmaidEffect implements Effect {
    * @param guess unused for the Handmaid effect
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
     currentPlayer.setProtectedByHandmaid(true);
-    System.out.println(
-        "Handmaid: " + currentPlayer.getName() + " is protected until their next turn.");
+    TCPServer.broadcast(
+        "Handmaid: " + currentPlayer.getName() + " is protected until their next turn.", null);
+    return true;
   }
 }

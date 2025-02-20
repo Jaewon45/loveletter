@@ -3,6 +3,7 @@ package com.example.loveletter.effect;
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Priest Effect - Priest Tomas (2).
@@ -20,20 +21,21 @@ public class PriestEffect implements Effect {
    * @param guess unused for the Priest effect
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      System.out.println("Priest: No valid target or target is out.");
-      return;
+      TCPServer.sendDirect(currentPlayer.getName(), "Priest: No valid target or target is out.");
+      return false;
     }
     if (!targetPlayer.getHand().isEmpty()) {
       Card card = targetPlayer.getHand().get(0);
-      System.out.println(
-          "Priest: "
-              + currentPlayer.getName()
-              + " sees "
-              + targetPlayer.getName()
-              + "'s card: "
-              + card);
+      TCPServer.broadcast(
+          "Priest: " + currentPlayer.getName() + " sees " + targetPlayer.getName() + "'s hand ",
+          null);
+      TCPServer.sendDirect(
+          currentPlayer.getName(),
+          "Priest: " + targetPlayer.getName() + "'s hand: " + card.getName());
+      return true;
     }
+    return false;
   }
 }

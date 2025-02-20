@@ -2,6 +2,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Countess Effect - Countess Wilhelmina (7).
@@ -21,7 +22,8 @@ public class CountessEffect implements Effect {
    * @param guess unused for the Countess effect
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-    System.out.println("Countess: No immediate effect on discard.");
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+    TCPServer.broadcast("Countess: No effect on discard.", null);
+    return true;
   }
 }

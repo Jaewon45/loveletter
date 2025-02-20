@@ -9,6 +9,7 @@ public final class Deck {
 
   private final List<Card> cards = new ArrayList<>();
   private final int numberOfPlayers;
+  private final Card[] removedCards = new Card[3];
 
   /**
    * Constructs a new deck based on the number of players.
@@ -19,22 +20,29 @@ public final class Deck {
    * @param numberOfPlayers the number of players participating
    */
   public Deck(int numberOfPlayers) {
+    if (numberOfPlayers < 2 || numberOfPlayers > 8) {
+      throw new IllegalArgumentException("Invalid number of players: " + numberOfPlayers);
+    }
+
     this.numberOfPlayers = numberOfPlayers;
     initDeck();
     if (numberOfPlayers > 4) {
-      initDeck();
+      initDeckExtra();
     }
     shuffle();
 
-    int cardsToRemove =
-        switch (numberOfPlayers) {
-          case 2 -> 4;
-          case 3, 4, 5, 6, 7, 8 -> 1;
-          default -> throw new AssertionError("Invalid number of players: " + numberOfPlayers);
-        };
+    cards.remove(cards.size() - 1);
 
-    for (int i = 0; i < cardsToRemove; i++) {
-      cards.remove(cards.size() - 1);
+    if (numberOfPlayers == 2) {
+      removedCards[0] = cards.remove(cards.size() - 1);
+      removedCards[1] = cards.remove(cards.size() - 1);
+      removedCards[2] = cards.remove(cards.size() - 1);
+
+      StringBuilder removedCardsMessage = new StringBuilder("Removed Cards: ");
+      for (Card card : removedCards) {
+        removedCardsMessage.append(card.toString()).append(" ");
+      }
+      TCPServer.broadcast(removedCardsMessage.toString().trim(), null);
     }
   }
 
@@ -88,6 +96,8 @@ public final class Deck {
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
+
+    assert cards.size() == 16;
   }
 
   /**
@@ -114,5 +124,28 @@ public final class Deck {
     for (int i = 0; i < cardsToRemove; i++) {
       cards.remove(cards.size() - 1);
     }
+  }
+
+  public Card[] getRemovedCards() {
+    return removedCards;
+  }
+
+  private void initDeckExtra() {
+    cards.add(Card.ASSASSIN);
+    cards.add(Card.JESTER);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.CARDINAL);
+    cards.add(Card.CARDINAL);
+    cards.add(Card.BARONESS);
+    cards.add(Card.BARONESS);
+    cards.add(Card.SYCOPHANT);
+    cards.add(Card.SYCOPHANT);
+    cards.add(Card.COUNT);
+    cards.add(Card.DOWAGER_QUEEN);
+    cards.add(Card.BISHOP);
+
+    assert cards.size() == 32;
   }
 }

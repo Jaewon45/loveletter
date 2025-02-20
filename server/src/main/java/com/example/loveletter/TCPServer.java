@@ -71,7 +71,7 @@ public class TCPServer {
    * @param message the message to broadcast
    * @param exclude the client to exclude from receiving the message, or {@code null} to send to all
    */
-  static void broadcast(String message, ClientHandler exclude) {
+  public static void broadcast(String message, ClientHandler exclude) {
     synchronized (clients) {
       for (ClientHandler client : clients.values()) {
         if (client != exclude) {
@@ -89,7 +89,7 @@ public class TCPServer {
    * @return {@code true} if the message was successfully sent; {@code false} if the recipient was
    *     not found
    */
-  static boolean sendDirect(String recipient, String message) {
+  public static boolean sendDirect(String recipient, String message) {
     ClientHandler client = clients.get(recipient);
     if (client != null) {
       client.send(message);
@@ -103,7 +103,7 @@ public class TCPServer {
    *
    * <p>This inner class processes incoming messages and commands from the client.
    */
-  static class ClientHandler implements Runnable {
+  public static class ClientHandler implements Runnable {
 
     /** The socket associated with this client. */
     private final Socket socket;
@@ -306,6 +306,28 @@ public class TCPServer {
             send("Error: No game active.");
           } else {
             send("Scores: " + currentGame.getScores());
+          }
+        }
+        case "/hand" -> {
+          // Show the player's hand.
+          if (currentGame == null) {
+            send("Error: No game active.");
+          } else {
+            send("Your hand: " + currentGame.getHand(nickname));
+          }
+        }
+        case "/explain" -> {
+          // Explain the card.
+          if (tokens.length < 2) {
+            send("Error: Usage /explain <card>");
+          } else {
+            String cardName = tokens[1];
+            Card card = Card.getCard(cardName);
+            if (card == null) {
+              send("Error: Unknown card " + cardName);
+            } else {
+              send(card.getDescription());
+            }
           }
         }
         default -> send("Error: Unknown command.");

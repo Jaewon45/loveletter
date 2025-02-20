@@ -3,6 +3,7 @@ package com.example.loveletter.effect;
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * King Effect - King (6).
@@ -20,22 +21,35 @@ public class KingEffect implements Effect {
    * @param guess unused for the King effect
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      System.out.println("King: No valid target or target is out.");
-      return;
+      TCPServer.sendDirect(currentPlayer.getName(), "King: No valid target or target is out.");
+      return false;
     }
 
     // Swap cards (in standard Love Letter, each player has exactly 1 card)
     if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
-      Card myCard = currentPlayer.getHand().remove(0);
-      Card theirCard = targetPlayer.getHand().remove(0);
+      Card myCard =
+          currentPlayer.getHand().stream()
+              .filter(card -> !"King".equals(card.getName()))
+              .findFirst()
+              .orElse(null);
+      Card theirCard = targetPlayer.getHand().get(0);
 
       currentPlayer.addCard(theirCard);
       targetPlayer.addCard(myCard);
 
-      System.out.println(
-          "King: " + currentPlayer.getName() + " swapped hands with " + targetPlayer.getName());
+      TCPServer.broadcast(
+          "King: " + currentPlayer.getName() + " swapped hands with " + targetPlayer.getName(),
+          null);
+      TCPServer.sendDirect(
+          currentPlayer.getName(),
+          "King: You swapped hands with "
+              + targetPlayer.getName()
+              + ". Your new card: "
+              + theirCard);
+      return true;
     }
+    return false;
   }
 }

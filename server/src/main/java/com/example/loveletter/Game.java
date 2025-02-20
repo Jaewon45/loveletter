@@ -94,7 +94,7 @@ public class Game {
    *   <li>Initializes the deck based on the number of players.
    *   <li>Removes the top card of the deck (face-down card).
    *   <li>For a 2-player game, removes three additional cards (face-up cards).
-   *   <li>Resets players’ hands, discard piles, and statuses, then deals one card to each player.
+   *   <li>Resets players' hands, discard piles, and statuses, then deals one card to each player.
    *   <li>Sets the first player (index 0) as the current player.
    * </ul>
    */
@@ -177,16 +177,24 @@ public class Game {
    * @param target the target player for the card's effect (may be {@code null})
    * @param guess an integer parameter used by some card effects (-1 if unused)
    */
-  public void discardCard(Player currentPlayer, Card cardToDiscard, Player target, int guess) {
-    System.out.println(currentPlayer.getName() + " discards " + cardToDiscard.getName());
+  public boolean discardCard(Player currentPlayer, Card cardToDiscard, Player target, int guess) {
+    // Apply the card effect first to check if it is a legal move.
+    boolean legalMove = cardToDiscard.getEffect().apply(this, currentPlayer, target, guess);
+    if (!legalMove) {
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Illegal move with " + cardToDiscard.getName() + "!");
+      return false;
+    }
+    // Broadcast the discard action.
+    TCPServer.broadcast(
+        currentPlayer.getName() + " discards " + cardToDiscard.getName() + "!", null);
     currentPlayer.getHand().remove(cardToDiscard);
     // Add to discard pile (assumes the player maintains a discard pile).
     currentPlayer.addToDiscardPile(cardToDiscard);
     if (cardToDiscard.getValue() == 8) {
       eliminatePlayer(currentPlayer);
-      return;
     }
-    cardToDiscard.getEffect().apply(this, currentPlayer, target, guess);
+    return true;
   }
 
   /**
@@ -196,29 +204,34 @@ public class Game {
    */
   public void eliminatePlayer(Player p) {
     p.setAlive(false);
-    System.out.println(p.getName() + " has been knocked out of the round!");
+    TCPServer.broadcast(p.getName() + " has been knocked out of the round!", null);
   }
 
   /**
    * Checks and applies the Countess rule.
    *
-   * <p>If a player holds exactly two cards and has the Countess (value 7) along with either the
-   * King (6) or Prince (5), the Countess must be discarded.
+   * <p>If a player holds the Countess (value 7) along with either the King (6) or Prince (5), the
+   * Countess must be discarded.
    *
    * @param player the player to check for the Countess rule
    */
   public void checkCountessRule(Player player) {
-    if (player.getHand().size() == 2) {
-      Card c1 = player.getHand().get(0);
-      Card c2 = player.getHand().get(1);
-      boolean hasCountess = (c1.getValue() == 7) || (c2.getValue() == 7);
-      boolean hasRoyal =
-          (c1.getValue() == 5 || c1.getValue() == 6) || (c2.getValue() == 5 || c2.getValue() == 6);
-      if (hasCountess && hasRoyal) {
-        Card countessCard = (c1.getValue() == 7) ? c1 : c2;
-        // Discard the Countess without a target or guess (-1 indicates unused).
-        discardCard(player, countessCard, null, -1);
+    boolean hasCountess = false;
+    boolean hasRoyal = false;
+    Card countessCard = null;
+
+    for (Card card : player.getHand()) {
+      if (card.getValue() == 7) {
+        hasCountess = true;
+        countessCard = card;
+      } else if (card.getValue() == 5 || card.getValue() == 6) {
+        hasRoyal = true;
       }
+    }
+
+    if (hasCountess && hasRoyal) {
+      // Discard the Countess without a target or guess (-1 indicates unused).
+      discardCard(player, countessCard, null, -1);
     }
   }
 
@@ -273,7 +286,7 @@ public class Game {
       }
     }
     if (roundWinner != null) {
-      System.out.println("Round " + round + " winner: " + roundWinner.getName());
+      TCPServer.broadcast("Round" + round + "winner:" + roundWinner.getName(), null);
       scores.put(roundWinner.getName(), scores.get(roundWinner.getName()) + 1);
     }
     round++;
@@ -339,13 +352,13 @@ public class Game {
    */
   boolean playCard(String nickname, String cardName, String target, int guess) {
     // Locate the player by nickname.
-    Player player = getPlayerByNickname(nickname);
+    Player player = getPlayerByNickname(target);
     if (player == null) {
-      System.out.println("Error: Player '" + nickname + "' not found.");
+      System.err.println("Internal Error: Player '" + nickname + "' not found.");
       return false;
     }
     if (!player.isAlive()) {
-      System.out.println("Error: Player '" + nickname + "' is not alive.");
+      System.err.println("Internal Error: Player '" + target + "' is not alive.");
       return false;
     }
 
@@ -358,7 +371,7 @@ public class Game {
       }
     }
     if (cardToPlay == null) {
-      System.out.println("Error: Card '" + cardName + "' not found in " + nickname + "'s hand.");
+      TCPServer.sendDirect(nickname, "Error: Card '" + cardName + "' not found in your hand.");
       return false;
     }
 
@@ -367,18 +380,29 @@ public class Game {
     if (target != null && !target.trim().isEmpty()) {
       targetPlayer = getPlayerByNickname(target);
       if (targetPlayer == null) {
-        System.out.println("Error: Target player '" + target + "' not found.");
+        TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
         return false;
       }
     }
 
     // Discard the card, which applies its effect.
-    discardCard(player, cardToPlay, targetPlayer, guess);
+    boolean legal = discardCard(player, cardToPlay, targetPlayer, guess);
+    if (!legal) {
+      return false;
+    }
 
     // Advance the turn. Note: if the round ends (e.g. deck empty or only one player alive),
     // nextTurn() will call endRound(), and turn advancement is not applicable.
     nextTurn();
 
     return true;
+  }
+
+  String getHand(String nickname) {
+    Player player = getPlayerByNickname(nickname);
+    if (player == null) {
+      return "Error: Player '" + nickname + "' not found.";
+    }
+    return player.getHand().toString();
   }
 }

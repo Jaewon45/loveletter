@@ -3,6 +3,7 @@ package com.example.loveletter.effect;
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Guard Effect - Guard Odette (1).
@@ -21,15 +22,15 @@ public class GuardEffect implements Effect {
    * @param guess the guessed card number (must be between 2 and 8)
    */
   @Override
-  public void apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
     // Must name a value other than 1, guess in [2..8]
     if (targetPlayer == null || guess < 2 || guess > 8) {
-      System.out.println("Guard: invalid guess or no target.");
-      return;
+      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid guess or no target.");
+      return false;
     }
     if (!targetPlayer.isAlive()) {
-      System.out.println("Guard: target is already knocked out.");
-      return;
+      TCPServer.sendDirect(currentPlayer.getName(), "Guard: target is already knocked out.");
+      return false;
     }
 
     // Check if the target's card matches the guess
@@ -40,6 +41,8 @@ public class GuardEffect implements Effect {
       } else {
         System.out.println("Guard: Guess was incorrect!");
       }
+      return true;
     }
+    return false;
   }
 }
