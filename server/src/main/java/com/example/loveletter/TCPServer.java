@@ -206,6 +206,9 @@ public class TCPServer {
      *   <li><code>/start</code> - Starts the game if there are 2-4 players.
      *   <li><code>/play &lt;card&gt; [target guess]</code> - Plays a card during an active game.
      *   <li><code>/score</code> - Shows the current scores to the requesting client.
+     *   <li><code>/hand</code> - Shows the player's hand during an active game.
+     *   <li><code>/explain &lt;card&gt;</code> - Explains the card.
+     *   <li><code>/end</code> - Ends the current game.
      * </ul>
      *
      * @param message the command message received from the client

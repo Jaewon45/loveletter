@@ -38,6 +38,9 @@ public class TCPClient {
    */
   private static final String SERVER_HOST = System.getProperty("server.host", "localhost");
 
+  /*
+   * A flag to indicate if the client is reconnecting to the server.
+   */
   static boolean reconnecting = false;
 
   /**
@@ -55,7 +58,7 @@ public class TCPClient {
           BufferedReader in =
               new BufferedReader(
                   new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-          PrintWriter out =
+          PrintWriter server =
               new PrintWriter(
                   new BufferedWriter(
                       new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
@@ -74,7 +77,7 @@ public class TCPClient {
                     + " again.");
           }
         }
-        out.println(nickname);
+        server.println(nickname);
 
         // Start a thread to asynchronously read messages from the server.
         Thread readerThread =
@@ -108,7 +111,7 @@ public class TCPClient {
             readerThread.interrupt();
             break;
           } else {
-            out.println(userInput);
+            server.println(userInput);
           }
         }
 
