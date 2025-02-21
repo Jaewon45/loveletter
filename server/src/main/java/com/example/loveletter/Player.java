@@ -111,6 +111,7 @@ public class Player {
    */
   public void addToDiscardPile(Card cardToDiscard) {
     discardPile.add(cardToDiscard);
+    TCPServer.broadcast("Player " + getName() + " discards: " + discardPile.toString() + ".", null);
   }
 
   /**
@@ -157,5 +158,10 @@ public class Player {
       }
     }
     return lowest;
+  }
+
+  public void discard(Card cardToDiscard) {
+    hand.remove(cardToDiscard);
+    addToDiscardPile(cardToDiscard);
   }
 }

@@ -21,6 +21,7 @@ public class PrinceEffect implements Effect {
    * @param currentPlayer the player who discarded the Prince
    * @param targetPlayer the target player who must discard their hand
    * @param guess unused for the Prince effect
+   * @return true if the effect was successfully applied, false otherwise
    */
   @Override
   public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
@@ -31,8 +32,19 @@ public class PrinceEffect implements Effect {
     // Force discard
     if (!targetPlayer.getHand().isEmpty()) {
       Card cardToDiscard = targetPlayer.getHand().get(0);
-      game.discardCard(targetPlayer, cardToDiscard, null, -1);
-      // If the discarded card was the Princess, the target is knocked out by discardCard.
+      if (cardToDiscard.getValue() == 8) {
+        TCPServer.broadcast(
+            "Prince: " + targetPlayer.getName() + " discarded the Princess and is eliminated.",
+            null);
+        game.eliminatePlayer(targetPlayer);
+        return true;
+      } else {
+        TCPServer.broadcast(
+            "Prince: " + targetPlayer.getName() + " discards " + cardToDiscard.toString() + ".",
+            null);
+        targetPlayer.discard(cardToDiscard);
+        game.getDeck().draw(targetPlayer);
+      }
     }
 
     // If target is still alive, draw a new card

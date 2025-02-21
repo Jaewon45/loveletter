@@ -172,6 +172,37 @@ public class Game {
    */
   public boolean discardCard(Player currentPlayer, Card cardToDiscard, Player target, int guess) {
     // Apply the card effect first to check if it is a legal move.
+    if (target != null && target.isProtectedByHandmaid()) {
+      boolean allProtected = true;
+      for (Player p : players) {
+        if (!p.isProtectedByHandmaid()) {
+          allProtected = false;
+          break;
+        }
+      }
+      if (!allProtected) {
+        TCPServer.sendDirect(
+            currentPlayer.getName(), "You cannot target a player protected by a handmaid!");
+        return false;
+      } else {
+        switch (cardToDiscard) {
+          case GUARD, PRIEST, BARON, KING -> {
+            TCPServer.broadcast("All players are protected by a handmaid!", null);
+            TCPServer.broadcast(cardToDiscard.getName() + " discared without effect", null);
+            currentPlayer.getHand().remove(cardToDiscard);
+            return true;
+          }
+          case PRINCE -> {
+            TCPServer.sendDirect(
+                currentPlayer.getName(),
+                "All players are protected by a handmaid!, to play the prince you must target"
+                    + " yourself");
+            return false;
+          }
+          default -> {}
+        }
+      }
+    }
     boolean legalMove = cardToDiscard.getEffect().apply(this, currentPlayer, target, guess);
     if (!legalMove) {
       TCPServer.sendDirect(
@@ -179,8 +210,16 @@ public class Game {
       return false;
     }
     // Broadcast the discard action.
-    TCPServer.broadcast(
-        currentPlayer.getName() + " discards " + cardToDiscard.getName() + "!", null);
+
+    String message = currentPlayer.getName() + " discards " + cardToDiscard.getName() + "!";
+    if (target != null) {
+      message += " Their target was " + target.getName() + ".";
+    }
+    if (guess != -1) {
+      message += " Their guess was " + guess + ".";
+    }
+
+    TCPServer.broadcast(message, null);
     currentPlayer.getHand().remove(cardToDiscard);
     // Add to discard pile (assumes the player maintains a discard pile).
     currentPlayer.addToDiscardPile(cardToDiscard);

@@ -54,7 +54,6 @@ public final class Deck {
   /**
    * Draws the top card from the deck.
    *
-   * @return the drawn {@link Card}
    * @throws IllegalStateException if the deck is empty
    */
   public void draw(Player player) {

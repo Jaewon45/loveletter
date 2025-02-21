@@ -38,53 +38,90 @@ public class TCPClient {
    */
   private static final String SERVER_HOST = System.getProperty("server.host", "localhost");
 
+  static boolean reconnecting = false;
+
   /**
    * The main method initiates the client, connects to the server, and handles input/output.
    *
    * @param args command-line arguments (not used)
    */
   public static void main(String[] args) {
-    try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
-        BufferedReader consoleReader =
-            new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
-        BufferedReader in =
-            new BufferedReader(
-                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-        PrintWriter out =
-            new PrintWriter(
-                new BufferedWriter(
-                    new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
-                true)) {
+    // Create a single consoleReader that wraps System.in (do not close it)
+    BufferedReader consoleReader =
+        new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
-      // Prompt the user to enter a nickname.
-      System.out.print("Enter your nickname: ");
-      String nickname = consoleReader.readLine();
-      out.println(nickname);
+    while (true) {
+      try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
+          BufferedReader in =
+              new BufferedReader(
+                  new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+          PrintWriter out =
+              new PrintWriter(
+                  new BufferedWriter(
+                      new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
+                  true)) {
 
-      // Start a new thread to read messages from the server asynchronously.
-      new Thread(
-              () -> {
-                String msg;
-                try {
-                  while ((msg = in.readLine()) != null) {
-                    System.out.println(msg);
-                  }
-                } catch (IOException e) {
-                  LOGGER.log(Level.SEVERE, "Error reading message from server", e);
-                }
-              })
-          .start();
-
-      // Main thread: read user input from the console and send it to the server.
-      String userInput;
-      while ((userInput = consoleReader.readLine()) != null) {
-        if ("bye".equalsIgnoreCase(userInput.trim())) {
-          System.exit(0);
+        // Prompt for a valid nickname.
+        String nickname;
+        while (true) {
+          System.out.print("Enter your nickname: ");
+          nickname = consoleReader.readLine().trim();
+          if (nickname.matches("[a-zA-Z0-9]+")) {
+            break;
+          } else {
+            System.out.println(
+                "Nickname must be alphanumeric without spaces or special characters. Please try"
+                    + " again.");
+          }
         }
-        out.println(userInput);
+        out.println(nickname);
+
+        // Start a thread to asynchronously read messages from the server.
+        Thread readerThread =
+            new Thread(
+                () -> {
+                  String msg;
+                  try {
+                    while ((msg = in.readLine()) != null) {
+                      System.out.println(msg);
+                    }
+                  } catch (IOException e) {
+                    if (reconnecting) {
+                      reconnecting = false;
+                    } else {
+                      LOGGER.log(Level.SEVERE, "Error reading message from server", e);
+                    }
+                  }
+                });
+        readerThread.setDaemon(true);
+        readerThread.start();
+
+        // Main loop: read user input and send to the server.
+        String userInput;
+        while ((userInput = consoleReader.readLine()) != null) {
+          if ("bye".equalsIgnoreCase(userInput.trim())) {
+            System.exit(0);
+          } else if ("/reconnect".equalsIgnoreCase(userInput.trim())) {
+            System.out.println("Reconnecting to the server...");
+            reconnecting = true;
+            socket.close(); // This will cause the reader thread to exit.
+            readerThread.interrupt();
+            break;
+          } else {
+            out.println(userInput);
+          }
+        }
+
+        // Wait briefly for the reader thread to finish cleanup.
+        try {
+          readerThread.join(1000);
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+        }
+
+      } catch (IOException ex) {
+        LOGGER.log(Level.SEVERE, "I/O error during session", ex);
       }
-    } catch (IOException ex) {
-      LOGGER.log(Level.SEVERE, "An I/O error occurred", ex);
     }
   }
 }

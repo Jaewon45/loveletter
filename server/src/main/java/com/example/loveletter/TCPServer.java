@@ -268,6 +268,15 @@ public class TCPServer {
             // in the Game class.
           }
         }
+        case "/end" -> {
+          // End the game.
+          if (currentGame == null) {
+            send("Error: No game to end.");
+          } else {
+            currentGame = null;
+            broadcast("Game ended.", null);
+          }
+        }
         case "/play" -> {
           // Play a card command: /play <card> [target guess]
           if (currentGame == null || !currentGame.isStarted()) {

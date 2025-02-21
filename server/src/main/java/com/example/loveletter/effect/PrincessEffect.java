@@ -2,6 +2,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Princess Effect - Princess Annette (8).
@@ -23,6 +24,8 @@ public class PrincessEffect implements Effect {
    */
   @Override
   public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+    TCPServer.broadcast(
+        "Princess discarded, Player " + currentPlayer.getName() + " has been eliminated.", null);
     game.eliminatePlayer(currentPlayer);
     return true;
   }
