@@ -320,6 +320,11 @@ public class TCPServer {
             send("Error: Usage /play <card> [target guess]");
             break;
           }
+          if (!currentGame.getCurrentPlayer().getName().equals(nickname))
+          {
+            send("It's not your turn");
+          }
+
           String cardName = tokens[1];
           String target = null;
           int guess = -1;
