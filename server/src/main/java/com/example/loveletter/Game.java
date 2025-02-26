@@ -187,8 +187,8 @@ public class Game {
       } else {
         switch (cardToDiscard) {
           case GUARD, PRIEST, BARON, KING -> {
-            TCPServer.broadcast("All players are protected by a handmaid!", null);
-            TCPServer.broadcast(cardToDiscard.getName() + " discared without effect", null);
+            TCPServer.broadcast("All players are protected by a handmaid!");
+            TCPServer.broadcast(cardToDiscard.getName() + " discared without effect");
             currentPlayer.getHand().remove(cardToDiscard);
             return true;
           }
@@ -219,7 +219,7 @@ public class Game {
       message += " Their guess was " + guess + ".";
     }
 
-    TCPServer.broadcast(message, null);
+    TCPServer.broadcast(message);
     currentPlayer.getHand().remove(cardToDiscard);
     // Add to discard pile (assumes the player maintains a discard pile).
     currentPlayer.addToDiscardPile(cardToDiscard);
@@ -236,7 +236,8 @@ public class Game {
    */
   public void eliminatePlayer(Player p) {
     p.setAlive(false);
-    TCPServer.broadcast(p.getName() + " has been knocked out of the round!", null);
+    TCPServer.broadcast(p.getName() + " has been knocked out of the round!", p.getName());
+    TCPServer.sendDirect(p.getName(), "You have been knocked out of the round");
   }
 
   /**
@@ -318,12 +319,12 @@ public class Game {
       }
     }
     if (roundWinner != null) {
-      TCPServer.broadcast("Round" + round + "winner:" + roundWinner.getName(), null);
+      TCPServer.broadcast("Round " + round + " winner: " + roundWinner.getName());
       scores.put(roundWinner.getName(), scores.get(roundWinner.getName()) + 1);
     }
     round++;
 
-    TCPServer.broadcast("Starting new Round", null);
+    TCPServer.broadcast("Starting new Round");
 
     // Prepare for a new round: reset player statuses and clear hands/discard piles.
     for (Player p : players) {
@@ -338,6 +339,7 @@ public class Game {
     }
     // The round winner starts the next round (or default to index 0 if no winner).
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
+    deck.draw(players.get(currentPlayerIndex));
   }
 
   /**

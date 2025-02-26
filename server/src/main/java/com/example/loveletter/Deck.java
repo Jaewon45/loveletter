@@ -42,7 +42,7 @@ public final class Deck {
       for (Card card : removedCards) {
         removedCardsMessage.append(card.toString()).append(" ");
       }
-      TCPServer.broadcast(removedCardsMessage.toString().trim(), null);
+      TCPServer.broadcast(removedCardsMessage.toString().trim());
     }
   }
 

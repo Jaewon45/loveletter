@@ -81,7 +81,37 @@ public class TCPServer {
       }
     }
   }
-
+  
+  /**
+   * Broadcasts a message to all connected clients except an optionally excluded client.
+   *
+   * @param message the message to broadcast
+   */
+  public static void broadcast(String message) {
+    System.out.println("Broadcasting: " + message);
+    synchronized (clients) {
+      for (ClientHandler client : clients.values()) {
+          client.send(message);
+      }
+    }
+  }
+    /**
+   * Broadcasts a message to all connected clients except an optionally excluded client.
+   *
+   * @param message the message to broadcast
+   * @param name the name of the exclude from receiving the message, or {@code null} to send to all
+   */
+  public static void broadcast(String message, String name) {
+    ClientHandler exclude = clients.get(name);
+    System.out.println("Broadcasting: " + message);
+    synchronized (clients) {
+      for (ClientHandler client : clients.values()) {
+        if (client != exclude) {
+          client.send(message);
+        }
+      }
+    }
+  }
   /**
    * Sends a direct message to a specific client identified by nickname.
    *
@@ -174,7 +204,7 @@ public class TCPServer {
             processCommand(message);
           } else {
             // Regular chat message.
-            broadcast(nickname + ": " + message, null);
+            broadcast(nickname + ": " + message);
           }
         }
       } catch (IOException e) {
@@ -189,7 +219,7 @@ public class TCPServer {
           clients.remove(nickname);
         }
         if (nickname != null && !nickname.isEmpty()) {
-          broadcast(nickname + " left the room", null);
+          broadcast(nickname + " left the room");
         }
       }
     }
@@ -236,7 +266,7 @@ public class TCPServer {
           } else {
             currentGame = new Game();
             if (currentGame.addPlayer(nickname)) {
-              broadcast("Game created by " + nickname, null);
+              broadcast("Game created by " + nickname);
             } else {
               send("Error: Unable to create game.");
             }
@@ -250,7 +280,7 @@ public class TCPServer {
             send("Error: Game already started.");
           } else {
             if (currentGame.addPlayer(nickname)) {
-              broadcast(nickname + " joined the game", null);
+              broadcast(nickname + " joined the game");
             } else {
               send("Error: Unable to join game.");
             }
@@ -266,7 +296,7 @@ public class TCPServer {
             send("Error: Need between 2 and 4 players to start the game.");
           } else {
             currentGame.start();
-            broadcast("Game started!", null);
+            broadcast("Game started!");
             // Additional game notifications (e.g., indicating whose turn it is) should be handled
             // in the Game class.
           }
@@ -277,7 +307,7 @@ public class TCPServer {
             send("Error: No game to end.");
           } else {
             currentGame = null;
-            broadcast("Game ended.", null);
+            broadcast("Game ended.");
           }
         }
         case "/play" -> {

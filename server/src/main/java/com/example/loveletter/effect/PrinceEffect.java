@@ -34,14 +34,13 @@ public class PrinceEffect implements Effect {
       Card cardToDiscard = targetPlayer.getHand().get(0);
       if (cardToDiscard.getValue() == 8) {
         TCPServer.broadcast(
-            "Prince: " + targetPlayer.getName() + " discarded the Princess and is eliminated.",
-            null);
+            "Prince: " + targetPlayer.getName() + " discarded the Princess and is eliminated.");
+
         game.eliminatePlayer(targetPlayer);
         return true;
       } else {
         TCPServer.broadcast(
-            "Prince: " + targetPlayer.getName() + " discards " + cardToDiscard.toString() + ".",
-            null);
+            "Prince: " + targetPlayer.getName() + " discards " + cardToDiscard.toString() + ".");
         targetPlayer.discard(cardToDiscard);
         game.getDeck().draw(targetPlayer);
       }
@@ -50,7 +49,7 @@ public class PrinceEffect implements Effect {
     // If target is still alive, draw a new card
     if (targetPlayer.isAlive()) {
       game.getDeck().draw(targetPlayer);
-      TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.", null);
+      TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.");
       return true;
     }
     return false;

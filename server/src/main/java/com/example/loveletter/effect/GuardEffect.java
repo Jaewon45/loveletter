@@ -44,7 +44,7 @@ public class GuardEffect implements Effect {
       //   message.append(targetPlayer.getName()).append(". Their guess was: ");
       // }
       // message.append(guess).append(".");
-      // TCPServer.broadcast(message.toString(), null);
+      // TCPServer.broadcast(message.toString());
       if (theirCard.getValue() == guess) {
         game.eliminatePlayer(targetPlayer);
       } else {
