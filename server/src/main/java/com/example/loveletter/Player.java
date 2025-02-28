@@ -147,6 +147,7 @@ public class Player {
   }
 
   /** Returns the card with the lowest value in the player's hand. */
+  // important for certain effects like Baron
   public Card getLowest() {
     if (hand.isEmpty()) {
       return null;

@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 @SuppressWarnings("CallToPrintStackTrace")
 public class TCPServer {
 
-  private static final Logger LOGGER = Logger.getLogger(TCPServer.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(TCPServer.class.getName()); // Other classes don’t need to access the server's logger
 
   /**
    * Port on which the server listens (default: 12345, can be overridden via system property
@@ -39,26 +39,30 @@ public class TCPServer {
    * <p>This map is synchronized to allow thread-safe access.
    */
   private static final Map<String, ClientHandler> clients =
-      Collections.synchronizedMap(new HashMap<>());
+      Collections.synchronizedMap(new HashMap<>()); // Only one thread modifies the map at a time
 
   /**
    * The currently active game.
    *
    * <p>If no game is active, this will be {@code null}.
    */
-  private static volatile Game currentGame = null;
+  private static volatile Game currentGame = null; 
+  //J: `volatile` ensures visibility of updates across multiple threads.
+  //J: so that changes made to currentGame by one thread are immediately visible to all other threads.
+  //J: Since TCPServer is a singleton server (only one instance runs), currentGame should be shared across all client threads.
+  //J: private: any client or external class could modify the game state unpredictably.
 
   /**
    * The main method starts the server and listens for incoming connections.
    *
    * @param args command-line arguments (not used)
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) { // J: Creates a ServerSocket that listens on a specified port.
     try (ServerSocket serverSocket = new ServerSocket(PORT)) {
       System.out.println("Server running on port " + PORT);
-      while (true) {
+      while (true) { // Infinite loop (while (true)) waits for new clients
         Socket socket = serverSocket.accept();
-        new Thread(new ClientHandler(socket)).start();
+        new Thread(new ClientHandler(socket)).start(); //J: Starts a new thread to handle each client separately
       }
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Server exception", ex);
@@ -72,10 +76,10 @@ public class TCPServer {
    * @param exclude the client to exclude from receiving the message, or {@code null} to send to all
    */
   public static void broadcast(String message, ClientHandler exclude) {
-    System.out.println("Broadcasting: " + message);
-    synchronized (clients) {
+    System.out.println("Broadcasting: " + message); 
+    synchronized (clients) { // J: Ensures thread-safe access while iterating over clients
       for (ClientHandler client : clients.values()) {
-        if (client != exclude) {
+        if (client != exclude) { e
           client.send(message);
         }
       }
@@ -97,7 +101,7 @@ public class TCPServer {
       client.send(message);
       return true;
     }
-    return false;
+    return false; // J: Q: what does it do?
   }
 
   /**
@@ -106,6 +110,7 @@ public class TCPServer {
    * <p>This inner class processes incoming messages and commands from the client.
    */
   public static class ClientHandler implements Runnable {
+  //J: static, it does not require an instance of TCPServer to be created, so that it can be used independently of the outer TCPServer class.
 
     /** The socket associated with this client. */
     private final Socket socket;
@@ -134,8 +139,11 @@ public class TCPServer {
      * <p>This method handles the initial handshake (receiving the nickname), processes incoming
      * messages, handles commands, and ensures proper cleanup on disconnection.
      */
-    @Override
-    public void run() {
+    @Override 
+    // J: make sure that run() is an implementation of Runnable.run().
+    // J: when there is an error under run(), the compiler throws an error instead of silently creating a new method
+    public void run() { // J: `run` contains the code that will be executed in a separate thread.
+    // J: below is the client handling logic
       try {
         in =
             new BufferedReader(

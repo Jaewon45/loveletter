@@ -293,7 +293,7 @@ public enum Card {
   }
 
   public static Card getCard(String name) {
-    return switch (name.toLowerCase(Locale.ENGLISH)) {
+    return switch (name.toLowerCase(Locale.ENGLISH)) { // Q: can it be shorter
       case "guard" -> GUARD;
       case "priest" -> PRIEST;
       case "baron" -> BARON;
