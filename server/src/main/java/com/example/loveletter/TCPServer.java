@@ -79,7 +79,7 @@ public class TCPServer {
     System.out.println("Broadcasting: " + message); 
     synchronized (clients) { // J: Ensures thread-safe access while iterating over clients
       for (ClientHandler client : clients.values()) {
-        if (client != exclude) { e
+        if (client != exclude) {
           client.send(message);
         }
       }
