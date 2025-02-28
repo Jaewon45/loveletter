@@ -23,7 +23,7 @@ public class CountessEffect implements Effect {
    */
   @Override
   public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-    TCPServer.broadcast("Countess: No effect on discard.", null);
+    TCPServer.broadcast("Countess: No effect on discard.");
     return true;
   }
 }

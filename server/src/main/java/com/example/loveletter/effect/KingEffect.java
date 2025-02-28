@@ -38,10 +38,11 @@ public class KingEffect implements Effect {
 
       currentPlayer.addCard(theirCard);
       targetPlayer.addCard(myCard);
+      currentPlayer.removeCard(myCard);
+      targetPlayer.removeCard(theirCard);
 
       TCPServer.broadcast(
-          "King: " + currentPlayer.getName() + " swapped hands with " + targetPlayer.getName(),
-          null);
+          "King: " + currentPlayer.getName() + " swapped hands with " + targetPlayer.getName());
       TCPServer.sendDirect(
           currentPlayer.getName(),
           "King: You swapped hands with "

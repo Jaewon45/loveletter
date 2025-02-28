@@ -52,7 +52,7 @@ public class BaronEffect implements Effect {
       } else if (myCard.getValue() < theirCard.getValue()) {
         game.eliminatePlayer(currentPlayer);
       } else {
-        TCPServer.broadcast("Baron: Tie => nothing happens.", null);
+        TCPServer.broadcast("Baron: Tie => nothing happens.");
       }
       return true;
     }

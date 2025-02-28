@@ -111,7 +111,7 @@ public class Player {
    */
   public void addToDiscardPile(Card cardToDiscard) {
     discardPile.add(cardToDiscard);
-    TCPServer.broadcast("Player " + getName() + " discards: " + discardPile.toString() + ".", null);
+    TCPServer.broadcast("Player " + getName() + " discards: " + discardPile.toString() + ".");
   }
 
   /**
@@ -165,4 +165,8 @@ public class Player {
     hand.remove(cardToDiscard);
     addToDiscardPile(cardToDiscard);
   }
+
+public void removeCard(Card myCard) {
+  hand.remove(myCard);
+}
 }
