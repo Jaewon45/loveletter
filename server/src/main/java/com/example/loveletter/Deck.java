@@ -78,7 +78,7 @@ public final class Deck {
     cards.add(Card.PRINCESS);
 
     cards.add(Card.COUNTESS);
-    
+
     cards.add(Card.KING);
 
     cards.add(Card.PRINCE);
@@ -119,26 +119,26 @@ public final class Deck {
 
   private void initDeckExtra() {
     cards.add(Card.ASSASSIN);
-    
+
     cards.add(Card.JESTER);
-    
+
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
-    
+
     cards.add(Card.CARDINAL);
     cards.add(Card.CARDINAL);
-    
+
     cards.add(Card.BARONESS);
     cards.add(Card.BARONESS);
-    
+
     cards.add(Card.SYCOPHANT);
     cards.add(Card.SYCOPHANT);
-    
+
     cards.add(Card.COUNT);
-    
+
     cards.add(Card.DOWAGER_QUEEN);
-    
+
     cards.add(Card.BISHOP);
 
     assert cards.size() == 32;

@@ -30,7 +30,7 @@ public class PriestEffect implements Effect {
       Card card = targetPlayer.getHand().get(0);
       TCPServer.broadcast(
           "Priest: " + currentPlayer.getName() + " sees " + targetPlayer.getName() + "'s hand ");
-        
+
       TCPServer.sendDirect(
           currentPlayer.getName(),
           "Priest: " + targetPlayer.getName() + "'s hand: " + card.getName());
