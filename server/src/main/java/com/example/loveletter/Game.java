@@ -339,7 +339,6 @@ public class Game {
     }
     // The round winner starts the next round (or default to index 0 if no winner).
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
-    deck.draw(players.get(currentPlayerIndex));
   }
 
   /**
@@ -425,8 +424,68 @@ public class Game {
   String getHand(String nickname) {
     Player player = getPlayerByNickname(nickname);
     if (player == null) {
-      return "Error: Player '" + nickname + "' not found.";
+        return "Error: Player '" + nickname + "' not found.";
     }
-    return player.getHand().toString();
+    
+    List<Card> hand = player.getHand();
+    StringBuilder handRepresentation = new StringBuilder("[");
+    
+    for (int i = 0; i < hand.size(); i++) {
+        Card card = hand.get(i);
+        handRepresentation.append(card.getValue()).append(": ").append(card.getName());
+        if (i < hand.size() - 1) {
+            handRepresentation.append(", ");
+        }
+    }
+    
+    handRepresentation.append("]");
+    return handRepresentation.toString();
   }
+
+  private Player forcedTarget;
+
+  /**
+  * Sets a forced target for the next action.
+  * @param targetPlayer The player that must be targeted by the next effect.
+  */
+  public void setForcedTarget(Player targetPlayer) {
+        this.forcedTarget = targetPlayer;
+  }
+  
+  /**
+  * Retrieves a second target player for the Cardinal effect.
+  * @param currentPlayer The player playing the Cardinal.
+  * @param targetPlayer The first target chosen.
+  * @return A second eligible player if available, otherwise null.
+  */
+  public Player getSecondTarget(Player currentPlayer, Player targetPlayer) {
+    return players.stream().filter(p -> p != currentPlayer && p != targetPlayer && p.isAlive()).findFirst().orElse(null);
+  }
+
+  /**
+  * Reveals the target player's hand only to the current player.
+  * @param currentPlayer The player who played the effect.
+  * @param targetPlayer The player whose hand will be revealed.
+  */
+  public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
+    TCPServer.sendDirect(currentPlayer.getName(), "Target's hand: " + targetPlayer.getHand().toString());
+  }
+
+  /**
+  * Awards a Token of Affection to the specified player.
+  * @param currentPlayer The player receiving the token.
+  */
+  public void awardToken(Player currentPlayer) {
+    scores.put(currentPlayer.getName(), scores.getOrDefault(currentPlayer.getName(), 0) + 1);
+  }
+
+  /**
+  * Draws a new card for the target player if the deck is not empty.
+  * @param targetPlayer The player drawing the card.
+  */
+  public void drawCardFor(Player targetPlayer) {
+    if (!deck.isEmpty()) {
+      deck.draw(targetPlayer);
+      }
+    }
 }

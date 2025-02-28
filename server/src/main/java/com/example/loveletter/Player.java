@@ -166,7 +166,28 @@ public class Player {
     addToDiscardPile(cardToDiscard);
   }
 
-public void removeCard(Card myCard) {
-  hand.remove(myCard);
-}
+  public void removeCard(Card myCard){
+    hand.remove(myCard);
+  }
+
+  private Player jesterTarget;
+    
+    /**
+     * Sets the Jester target, meaning if this player wins, the Jester gains a Token of Affection.
+     * @param targetPlayer The player targeted by the Jester effect.
+     */
+    public void setJesterTarget(Player targetPlayer) {
+        this.jesterTarget = targetPlayer;
+    }
+
+    /**
+     * Increases the value of the player's hand by 1 at the end of the round.
+     * Used in CountEffect.
+     */
+    public void incrementHandValue() {
+        if (!hand.isEmpty()) {
+            hand.set(0, new Card(hand.get(0).getValue() + 1, hand.get(0).getName(), hand.get(0).getDescription(), hand.get(0).getEffect()));
+        }
+    }
+  
 }

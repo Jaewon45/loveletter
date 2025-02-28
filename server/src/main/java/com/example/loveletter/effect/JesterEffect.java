@@ -3,12 +3,18 @@ package com.example.loveletter.effect;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
+/**
+ * Represents the effect of the Jester card.
+ * If the chosen player wins the round, the current player gains a Token of Affection.
+ */
 public class JesterEffect implements Effect {
 
-  public JesterEffect() {}
-
-  @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
+    @Override
+    public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+        if (targetPlayer == null) {
+            return false; // Target is required
+        }
+        currentPlayer.setJesterTarget(targetPlayer);
+        return true;
+    }
 }
