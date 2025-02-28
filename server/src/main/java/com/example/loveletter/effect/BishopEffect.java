@@ -10,7 +10,8 @@ import com.example.loveletter.Player;
 public class BishopEffect implements Effect {
 
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null || guess < 1 || guess > 8) {
       return false;
     }

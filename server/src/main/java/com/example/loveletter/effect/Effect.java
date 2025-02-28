@@ -19,5 +19,6 @@ public interface Effect {
    * @param targetPlayer another player chosen as the target (may be null)
    * @param guess used by certain card effects (e.g., Guard), otherwise -1
    */
-  boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess);
+  boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget);
 }

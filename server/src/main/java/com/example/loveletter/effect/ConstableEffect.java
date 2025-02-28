@@ -10,7 +10,8 @@ import com.example.loveletter.Player;
 public class ConstableEffect implements Effect {
 
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     return true;
   }
 }

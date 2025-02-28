@@ -7,10 +7,11 @@ import java.util.List;
 public class Player {
 
   private final String nickname;
-  private final List<Card> hand;
+  private List<Card> hand;
   private final List<Card> discardPile;
   private boolean alive;
   private boolean protectedByHandmaid;
+  public int countIncrease;
 
   /**
    * Constructs a new Player with the given nickname.
@@ -23,6 +24,7 @@ public class Player {
     this.discardPile = new ArrayList<>();
     this.alive = true; // By default, a new player starts alive
     this.protectedByHandmaid = false;
+    this.countIncrease = 0;
   }
 
   /**
@@ -170,7 +172,7 @@ public class Player {
     hand.remove(myCard);
   }
 
-  private Player jesterTarget;
+  public Player jesterTarget;
 
   /**
    * Sets the Jester target, meaning if this player wins, the Jester gains a Token of Affection.
@@ -179,5 +181,9 @@ public class Player {
    */
   public void setJesterTarget(Player targetPlayer) {
     this.jesterTarget = targetPlayer;
+  }
+
+  public void setHand(List<Card> hand2) {
+    this.hand = hand2;
   }
 }

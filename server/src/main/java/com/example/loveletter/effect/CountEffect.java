@@ -10,7 +10,9 @@ import com.example.loveletter.Player;
 public class CountEffect implements Effect {
 
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    currentPlayer.countIncrease++;
     return true;
   }
 }

@@ -19,13 +19,15 @@ import java.util.logging.Logger;
  * from the user to the server, and displays incoming messages from the server asynchronously.
  */
 public class TCPClient {
-  // J: entry point (?) - to be accessible from outside its package, so that java runtime can execute it
+  // J: entry point (?) - to be accessible from outside its package, so that java runtime can
+  // execute it
   // J: socket을 이용해서 서버에 연결, 실시간으로 메시지 전송, 채팅창 메시지 입력받는 separate thread `multithreading` 하는 클래스
   // J: encapsulation by private constants, modularity by separate concerns
 
   /** Logger for logging client events and errors. */
   private static final Logger LOGGER = Logger.getLogger(TCPClient.class.getName());
-  //J: private; 다른 클래스에서 수정 불가, static; 클래스내 모든 인스턴스에서 공유됨, final; not to be reassigned
+
+  // J: private; 다른 클래스에서 수정 불가, static; 클래스내 모든 인스턴스에서 공유됨, final; not to be reassigned
 
   /**
    * The port number of the server.
@@ -34,7 +36,8 @@ public class TCPClient {
    */
   private static final int SERVER_PORT =
       Integer.parseInt(System.getProperty("server.port", "12345"));
-      // J: private; port shouldn't be modifiable by external classes
+
+  // J: private; port shouldn't be modifiable by external classes
 
   /**
    * The hostname of the server.
@@ -47,6 +50,7 @@ public class TCPClient {
    * A flag to indicate if the client is reconnecting to the server.
    */
   static boolean reconnecting = false;
+
   // J: not private as it can be accessed from a diff thread ?
 
   /**
@@ -56,13 +60,14 @@ public class TCPClient {
    */
   public static void main(String[] args) {
     // Create a single consoleReader that wraps System.in (do not close it)
-    BufferedReader consoleReader = 
+    BufferedReader consoleReader =
         new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     while (true) { // J: infinite loop 문제가 생기거나 연결 끊기더라도 keep retrying connections
-      try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT); // J: create socket conn to the server
+      try (Socket socket =
+              new Socket(SERVER_HOST, SERVER_PORT); // J: create socket conn to the server
           BufferedReader in =
-              new BufferedReader(  //J: reads data from the server
+              new BufferedReader( // J: reads data from the server
                   new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
           PrintWriter server =
               new PrintWriter( // J: send msg to the server
@@ -110,8 +115,8 @@ public class TCPClient {
         while ((userInput = consoleReader.readLine()) != null) {
           if ("bye".equalsIgnoreCase(userInput.trim())) { // J: exit the client
             System.exit(0);
-          } else if ("/reconnect".equalsIgnoreCase(userInput.trim())) { //J: 소켓 닫고 재연결
-            System.out.println("Reconnecting to the server..."); 
+          } else if ("/reconnect".equalsIgnoreCase(userInput.trim())) { // J: 소켓 닫고 재연결
+            System.out.println("Reconnecting to the server...");
             reconnecting = true;
             socket.close(); // This will cause the reader thread to exit.
             readerThread.interrupt();
@@ -124,8 +129,10 @@ public class TCPClient {
         // Wait briefly for the reader thread to finish cleanup.
         try {
           readerThread.join(1000); // main thread wait 1s
-        } catch (InterruptedException ex) { // if waiting is interrupted 
-          Thread.currentThread().interrupt(); // add interrupted flag so that the main thread can be handled properly later
+        } catch (InterruptedException ex) { // if waiting is interrupted
+          Thread.currentThread()
+              .interrupt(); // add interrupted flag so that the main thread can be handled properly
+          // later
         }
 
       } catch (IOException ex) {

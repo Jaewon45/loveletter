@@ -345,6 +345,7 @@ public class TCPServer {
 
           String cardName = tokens[1];
           String target = null;
+          String secondTarget = null;
           int guess = -1;
           if (tokens.length >= 3) {
             // Expecting target and optionally a guess value.
@@ -360,11 +361,14 @@ public class TCPServer {
                 break;
               }
             }
+            if (params.length >= 3) {
+              secondTarget = params[2];
+            }
           }
           // Call the game logic to play a card.
           try {
 
-            currentGame.playCard(nickname, cardName, target, guess);
+            currentGame.playCard(nickname, cardName, target, guess, secondTarget);
           } catch (Exception e) {
             send("Error: Unable to play card " + cardName + " : " + e.toString());
           }

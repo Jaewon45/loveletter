@@ -21,7 +21,8 @@ public class HandmaidEffect implements Effect {
    * @param guess unused for the Handmaid effect
    */
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     currentPlayer.setProtectedByHandmaid(true);
     TCPServer.broadcast(
         "Handmaid: " + currentPlayer.getName() + " is protected until their next turn.");

@@ -10,7 +10,8 @@ import com.example.loveletter.Player;
 public class JesterEffect implements Effect {
 
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null) {
       return false; // Target is required
     }

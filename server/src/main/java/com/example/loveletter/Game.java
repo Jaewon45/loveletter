@@ -170,7 +170,8 @@ public class Game {
    * @param target the target player for the card's effect (may be {@code null})
    * @param guess an integer parameter used by some card effects (-1 if unused)
    */
-  public boolean discardCard(Player currentPlayer, Card cardToDiscard, Player target, int guess) {
+  public boolean discardCard(
+      Player currentPlayer, Card cardToDiscard, Player target, int guess, Player secondTarget) {
     // Apply the card effect first to check if it is a legal move.
     if (target != null && target.isProtectedByHandmaid()) {
       boolean allProtected = true;
@@ -203,7 +204,8 @@ public class Game {
         }
       }
     }
-    boolean legalMove = cardToDiscard.getEffect().apply(this, currentPlayer, target, guess);
+    boolean legalMove =
+        cardToDiscard.getEffect().apply(this, currentPlayer, target, guess, secondTarget);
     if (!legalMove) {
       TCPServer.sendDirect(
           currentPlayer.getName(), "Illegal move with " + cardToDiscard.getName() + "!");
@@ -264,7 +266,7 @@ public class Game {
 
     if (hasCountess && hasRoyal) {
       // Discard the Countess without a target or guess (-1 indicates unused).
-      discardCard(player, countessCard, null, -1);
+      discardCard(player, countessCard, null, -1, null);
     }
   }
 
@@ -305,14 +307,8 @@ public class Game {
         if (!p.getHand().isEmpty()) {
           int value = p.getHand().get(0).getValue();
 
-          // Count the number of "Count" cards in the discard pile
-          long countCards =
-              p.getDiscardPile().stream()
-                  .filter(card -> card == Card.COUNT) // Check if the card is Count
-                  .count();
-
           // Increase the value for each Count card found
-          value += countCards;
+          value += p.countIncrease;
 
           if (value > highestValue) {
             highestValue = value;
@@ -331,6 +327,12 @@ public class Game {
     if (roundWinner != null) {
       TCPServer.broadcast("Round " + round + " winner: " + roundWinner.getName());
       scores.put(roundWinner.getName(), scores.get(roundWinner.getName()) + 1);
+      for (Player player : players) {
+        if (player.jesterTarget == roundWinner) {
+          TCPServer.broadcast("Jester winner: " + player.getName());
+          scores.put(player.getName(), scores.get(player.getName()) + 1);
+        }
+      }
     }
     round++;
 
@@ -387,7 +389,8 @@ public class Game {
    * @param target the nickname of the target player (may be {@code null} or empty if not required)
    * @param guess an additional parameter used by some card effects (e.g., Guard)
    */
-  void playCard(String nickname, String cardName, String target, int guess) throws Exception {
+  void playCard(String nickname, String cardName, String target, int guess, String secondTarget)
+      throws Exception {
     // Locate the player by nickname.
     Player player = getPlayerByNickname(nickname);
     if (player == null) {
@@ -420,8 +423,17 @@ public class Game {
       }
     }
 
+    Player secondTargetPlayer = null;
+    if (secondTarget != null && !secondTarget.trim().isEmpty()) {
+      secondTargetPlayer = getPlayerByNickname(secondTarget);
+      if (secondTargetPlayer == null) {
+        TCPServer.sendDirect(nickname, "Error: Target Player '" + secondTarget + "' not found.");
+        throw new Exception("Error: Target Player '" + secondTarget + "' not found.");
+      }
+    }
+
     // Discard the card, which applies its effect.
-    boolean legal = discardCard(player, cardToPlay, targetPlayer, guess);
+    boolean legal = discardCard(player, cardToPlay, targetPlayer, guess, secondTargetPlayer);
     if (!legal) {
       throw new Exception("Internal Error: Illegal move with " + cardToPlay.getName() + "!");
     }

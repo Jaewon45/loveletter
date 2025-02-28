@@ -23,7 +23,8 @@ public class BaronEffect implements Effect {
    * @param guess unused for the Baron effect
    */
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Baron: No valid target.");
       return false;

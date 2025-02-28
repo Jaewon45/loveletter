@@ -22,7 +22,8 @@ public class GuardEffect implements Effect {
    * @param guess the guessed card number (must be between 2 and 8)
    */
   @Override
-  public boolean apply(Game game, Player currentPlayer, Player targetPlayer, int guess) {
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     // Must name a value other than 1, guess in [2..8]
     if (targetPlayer == null || guess < 2 || guess > 8) {
       TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid guess or no target.");
