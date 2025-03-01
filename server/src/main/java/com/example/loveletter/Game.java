@@ -388,6 +388,7 @@ public class Game {
    * @param cardName the name of the card to be played
    * @param target the nickname of the target player (may be {@code null} or empty if not required)
    * @param guess an additional parameter used by some card effects (e.g., Guard)
+   * @param secondTarget the second target for effects that target 2 players
    */
   void playCard(String nickname, String cardName, String target, int guess, String secondTarget)
       throws Exception {
@@ -420,6 +421,11 @@ public class Game {
       if (targetPlayer == null) {
         TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
         throw new Exception("Error: Target Player '" + target + "' not found.");
+      }
+      if (forcedTarget != null && targetPlayer != forcedTarget) {
+        TCPServer.sendDirect(
+            nickname, "Error: You have to choose the forced target '" + forcedTarget + ".");
+        throw new Exception("Error: You have to choose the forced target '" + forcedTarget + ".");
       }
     }
 
@@ -476,17 +482,12 @@ public class Game {
   }
 
   /**
-   * Retrieves a second target player for the Cardinal effect.
+   * Returns the forced target player.
    *
-   * @param currentPlayer The player playing the Cardinal.
-   * @param targetPlayer The first target chosen.
-   * @return A second eligible player if available, otherwise null.
+   * @return the forced target player, or {@code null} if no forced target is set
    */
-  public Player getSecondTarget(Player currentPlayer, Player targetPlayer) {
-    return players.stream()
-        .filter(p -> p != currentPlayer && p != targetPlayer && p.isAlive())
-        .findFirst()
-        .orElse(null);
+  public Player getForcedTarget() {
+    return forcedTarget;
   }
 
   /**
@@ -497,7 +498,8 @@ public class Game {
    */
   public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
     TCPServer.sendDirect(
-        currentPlayer.getName(), "Target's hand: " + targetPlayer.getHand().toString());
+        currentPlayer.getName(),
+        targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString());
   }
 
   /**

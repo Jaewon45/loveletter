@@ -36,7 +36,7 @@ public class GuardEffect implements Effect {
 
     // Check if the target's card matches the guess
     if (!targetPlayer.getHand().isEmpty()) {
-      Card theirCard = targetPlayer.getHand().get(0); // Standard Love Letter: 1 card per hand
+      Card theirCard = targetPlayer.getHand().get(0);
       // StringBuilder message = new StringBuilder();
       // if (currentPlayer.getName() != null) {
       //   message.append(currentPlayer.getName()).append(" plays: their target player is ");
@@ -46,7 +46,11 @@ public class GuardEffect implements Effect {
       // }
       // message.append(guess).append(".");
       // TCPServer.broadcast(message.toString());
-      if (theirCard.getValue() == guess) {
+      if (theirCard.equals(Card.ASSASSIN)) {
+        game.eliminatePlayer(currentPlayer);
+        targetPlayer.discard(theirCard);
+        game.drawCardFor(targetPlayer);
+      } else if (theirCard.getValue() == guess) {
         game.eliminatePlayer(targetPlayer);
       } else {
         System.out.println("Guard: Guess was incorrect!");

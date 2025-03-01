@@ -25,6 +25,10 @@ public class BaronEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (game.getForcedTarget() != null) {
+      game.setForcedTarget(null);
+    }
+
     if (targetPlayer == null || !targetPlayer.isAlive()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Baron: No valid target.");
       return false;
