@@ -250,8 +250,45 @@ public class Game {
   }
 
   private void endGame() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'endGame'");
+    // Find the winner (player with most tokens)
+    Player winner = null;
+    int maxTokens = -1;
+    
+    for (Player player : players) {
+        int tokens = scores.get(player.getName());
+        if (tokens > maxTokens) {
+            maxTokens = tokens;
+            winner = player;
+        }
+    }
+
+    if (winner != null) {
+        // Broadcast game end messages
+        TCPServer.broadcast("🎉 GAME OVER! 🎉");
+        TCPServer.broadcast(winner.getName() + " has won the game with " + maxTokens + " tokens of affection!");
+        TCPServer.broadcast("Final Scores: " + scores.toString());
+    }
+
+    // Reset game state
+    started = false;
+    currentPlayerIndex = 0;
+    round = 0;
+    deck = null;
+    
+    // Clear player states
+    for (Player p : players) {
+        p.clearHand();
+        p.clearDiscardPile();
+        p.setAlive(true);
+        p.jesterTarget = null;
+    }
+    
+    // Clear scores
+    scores.clear();
+    
+    // Broadcast final message
+    TCPServer.broadcast("Type /end to end the game!");
+    TCPServer.broadcast("Type /create to start a new game!");
   }
 
   /**
@@ -544,18 +581,21 @@ public class Game {
     }
   }
 
+  /**
+   * Returns the number of tokens needed to win based on player count.
+   */
   private int tokensNeededToWin() {
     switch (players.size()) {
-      case 2 -> {
-        return 7;
-      }
-      case 3 -> {
-        return 5;
-      }
-      case 4, 5, 6, 7, 8 -> {
-        return 4;
-      }
-      default -> throw new IllegalStateException("Unexpected number of players: " + players.size());
+        case 2 -> {
+            return 7;
+        }
+        case 3 -> {
+            return 5;
+        }
+        case 4, 5, 6, 7, 8 -> {
+            return 4;
+        }
+        default -> throw new IllegalStateException("Unexpected number of players: " + players.size());
     }
   }
 

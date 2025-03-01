@@ -27,7 +27,7 @@ public class TCPServer {
 
   private static final Logger LOGGER =
       Logger.getLogger(
-          TCPServer.class.getName()); // Other classes don’t need to access the server's logger
+          TCPServer.class.getName()); // Other classes don't need to access the server's logger
 
   /**
    * Port on which the server listens (default: 12345, can be overridden via system property
@@ -210,7 +210,22 @@ public class TCPServer {
           }
           clients.put(nickname, this);
         }
-        out.println("welcome " + nickname);
+
+        // Send welcome messages
+        send("Welcome " + nickname + "!");
+        send("\nTokens needed to win:");
+        send("- 2 players: 7 tokens");
+        send("- 3 players: 5 tokens");
+        send("- 4+ players: 4 tokens");
+        send("\nAvailable commands:");
+        send("- /create : Create a new game");
+        send("- /join : Join an existing game");
+        send("- /start : Start the game (2-4 players needed)");
+        send("- /play <card> [target] [guess] : Play a card");
+        send("- /hand : View your current hand");
+        send("- /score : View current scores");
+        send("- /explain <card> : Get card explanation");
+
         broadcast(nickname + " joined the room", this);
 
         String message;
