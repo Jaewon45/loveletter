@@ -20,6 +20,10 @@ public class CardinalEffect implements Effect {
       return false;
     }
 
+    if (game.getForcedTarget() != null) {
+      game.setForcedTarget(null);
+    }
+
     if (guess != 1 && guess != 2) {
       TCPServer.sendDirect(
           currentPlayer.getName(),

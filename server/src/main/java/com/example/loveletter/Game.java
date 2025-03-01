@@ -240,6 +240,22 @@ public class Game {
     p.setAlive(false);
     TCPServer.broadcast(p.getName() + " has been knocked out of the round!", p.getName());
     TCPServer.sendDirect(p.getName(), "You have been knocked out of the round");
+    for (Card card : p.getDiscardPile()) {
+      if (card.equals(Card.CONSTABLE)) {
+        TCPServer.broadcast(
+            p.getName() + " had a Constable in their discard pile, they gain a token of affection");
+        scores.put(p.getName(), scores.get(p.getName()) + 1);
+      }
+      // constable is only in games with 5 or more players so 4 tokens is the win condition
+      if (scores.get(p.getName()) >= 4) {
+        endGame();
+      }
+    }
+  }
+
+  private void endGame() {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'endGame'");
   }
 
   /**

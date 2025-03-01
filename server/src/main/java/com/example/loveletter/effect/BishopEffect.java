@@ -15,6 +15,10 @@ public class BishopEffect implements Effect {
     if (targetPlayer == null || guess < 1 || guess > 8) {
       return false;
     }
+    if (game.getForcedTarget() != null) {
+      game.setForcedTarget(null);
+    }
+
     if (targetPlayer.getHand().get(0).getValue() == guess) {
       game.awardToken(currentPlayer);
       targetPlayer.discard(targetPlayer.getHand().get(0));

@@ -15,6 +15,10 @@ public class BaronessEffect implements Effect {
     if (targetPlayer == null) {
       return false;
     }
+    if (game.getForcedTarget() != null) {
+      game.setForcedTarget(null);
+    }
+
     game.revealHandToPlayer(currentPlayer, targetPlayer);
     return true;
   }
