@@ -27,6 +27,7 @@ public class PriestEffect implements Effect {
       TCPServer.sendDirect(currentPlayer.getName(), "Priest: No valid target or target is out.");
       return false;
     }
+
     if (!targetPlayer.getHand().isEmpty()) {
       Card card = targetPlayer.getHand().get(0);
       TCPServer.broadcast(

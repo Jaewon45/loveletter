@@ -15,6 +15,7 @@ public class JesterEffect implements Effect {
     if (targetPlayer == null) {
       return false; // Target is required
     }
+
     currentPlayer.setJesterTarget(targetPlayer);
     return true;
   }

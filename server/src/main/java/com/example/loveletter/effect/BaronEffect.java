@@ -30,10 +30,6 @@ public class BaronEffect implements Effect {
       return false;
     }
 
-    if (game.getForcedTarget() != null) {
-      game.setForcedTarget(null);
-    }
-
     // Compare card values
     if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
       Card myCard = currentPlayer.getLowest();

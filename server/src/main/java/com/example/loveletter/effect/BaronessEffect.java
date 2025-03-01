@@ -2,6 +2,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Baroness card. Allows the player to look at the hands of one or two
@@ -15,10 +16,9 @@ public class BaronessEffect implements Effect {
     if (targetPlayer == null) {
       return false;
     }
-    if (game.getForcedTarget() != null) {
-      game.setForcedTarget(null);
-    }
 
+    TCPServer.broadcast(
+        "Baroness: Showing " + currentPlayer.getName() + targetPlayer.getName() + "'s hand");
     game.revealHandToPlayer(currentPlayer, targetPlayer);
     return true;
   }

@@ -2,6 +2,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Sycophant card. Forces the next player to target the selected player
@@ -16,6 +17,7 @@ public class SycophantEffect implements Effect {
       return false; // Target is required
     }
     game.setForcedTarget(targetPlayer);
+    TCPServer.broadcast("Jester: the next player has to target:" + targetPlayer.getName());
     return true;
   }
 }

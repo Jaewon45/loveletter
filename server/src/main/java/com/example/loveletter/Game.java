@@ -244,11 +244,7 @@ public class Game {
       if (card.equals(Card.CONSTABLE)) {
         TCPServer.broadcast(
             p.getName() + " had a Constable in their discard pile, they gain a token of affection");
-        scores.put(p.getName(), scores.get(p.getName()) + 1);
-      }
-      // constable is only in games with 5 or more players so 4 tokens is the win condition
-      if (scores.get(p.getName()) >= 4) {
-        endGame();
+        awardToken(p, true);
       }
     }
   }
@@ -342,12 +338,18 @@ public class Game {
     }
     if (roundWinner != null) {
       TCPServer.broadcast("Round " + round + " winner: " + roundWinner.getName());
-      scores.put(roundWinner.getName(), scores.get(roundWinner.getName()) + 1);
+      awardToken(roundWinner, false);
       for (Player player : players) {
         if (player.jesterTarget == roundWinner) {
           TCPServer.broadcast("Jester winner: " + player.getName());
-          scores.put(player.getName(), scores.get(player.getName()) + 1);
+          awardToken(player, true);
         }
+      }
+    }
+    for (Player p: players){
+      if (scores.get(p.getName()) >= tokensNeededToWin()){
+        endGame();
+        return;
       }
     }
     round++;
@@ -438,10 +440,11 @@ public class Game {
         TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
         throw new Exception("Error: Target Player '" + target + "' not found.");
       }
-      if (forcedTarget != null && targetPlayer != forcedTarget) {
-        TCPServer.sendDirect(
-            nickname, "Error: You have to choose the forced target '" + forcedTarget + ".");
-        throw new Exception("Error: You have to choose the forced target '" + forcedTarget + ".");
+      if (forcedTarget != null) {
+        TCPServer.broadcast("Forced target:  '" + forcedTarget);
+
+        targetPlayer = forcedTarget;
+        forcedTarget = null;
       }
     }
 
@@ -523,8 +526,11 @@ public class Game {
    *
    * @param currentPlayer The player receiving the token.
    */
-  public void awardToken(Player currentPlayer) {
+  public void awardToken(Player currentPlayer, boolean endGameIfEnough) {
     scores.put(currentPlayer.getName(), scores.getOrDefault(currentPlayer.getName(), 0) + 1);
+    if (scores.get(currentPlayer.getName()) >= tokensNeededToWin()) {
+      endGame();
+    }
   }
 
   /**
@@ -537,4 +543,20 @@ public class Game {
       deck.draw(targetPlayer);
     }
   }
+
+  private int tokensNeededToWin() {
+    switch (players.size()) {
+      case 2 -> {
+        return 7;
+      }
+      case 3 -> {
+        return 5;
+      }
+      case 4, 5, 6, 7, 8 -> {
+        return 4;
+      }
+      default -> throw new IllegalStateException("Unexpected number of players: " + players.size());
+    }
+  }
+
 }

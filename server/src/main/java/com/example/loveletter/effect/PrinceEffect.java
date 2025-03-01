@@ -30,6 +30,7 @@ public class PrinceEffect implements Effect {
       TCPServer.sendDirect(currentPlayer.getName(), "Prince: No valid target or target is out.");
       return false;
     }
+
     // Force discard
     if (!targetPlayer.getHand().isEmpty()) {
       Card cardToDiscard = targetPlayer.getHand().get(0);

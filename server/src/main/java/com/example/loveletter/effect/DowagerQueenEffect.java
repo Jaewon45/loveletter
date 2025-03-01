@@ -15,6 +15,7 @@ public class DowagerQueenEffect implements Effect {
     if (targetPlayer == null || currentPlayer == targetPlayer) {
       return false; // Must choose another player
     }
+
     int currentValue = currentPlayer.getHand().get(0).getValue();
     int targetValue = targetPlayer.getHand().get(0).getValue();
     if (currentValue > targetValue) {
