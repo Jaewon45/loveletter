@@ -13,19 +13,24 @@ public class JesterEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast("- " + currentPlayer.getName() + " discards Jester with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
+      return false;
+    }
+
+    if (targetPlayer == currentPlayer) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Cannot target yourself with Jester.");
       return false;
     }
 
     TCPServer.broadcast(
         "- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
     currentPlayer.setJesterTarget(targetPlayer);
-    return true;
-  }
-
-  @Override
-  public boolean requiresSecondTarget() {
     return true;
   }
 }

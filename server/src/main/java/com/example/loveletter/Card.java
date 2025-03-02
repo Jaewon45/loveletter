@@ -235,9 +235,9 @@ public enum Card {
    * then look at one of the hands without revealing it to others.
    */
   CARDINAL(
-      10,
+      2,
       "Cardinal",
-      "(Value: 10) When you discard the Cardinal, choose exactly 2 players (you may"
+      "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you may"
           + "include yourself), who will switch hands. Then, once the hands are switched, you may"
           + "look at the first target's hand without revealing it to any other players. If less than 2 players"
           + "still in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is"
@@ -253,8 +253,11 @@ public enum Card {
   JESTER(
       0,
       "Jester",
-      "(Value: 0) When you discard the Jester, choose two players (can include yourself). "
-          + "Guess which of them will win this round. If you're right, gain a token.",
+      "(Value: 0) When you discard the Jester, choose another player—ideally, the one you believe is most likely to win the"
+          + "round. It’s helpful to place the Jester token provided in the game near the player you chose,"
+          + "so everyone remembers your choice. If you’re correct, and your chosen player does win the"
+          + "round, you gain a Token of Affection. If this would give you enough Tokens to win the"
+          + "game, then you win immediately and the game ends.",
       new JesterEffect()),
 
   /**

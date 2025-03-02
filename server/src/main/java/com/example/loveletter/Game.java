@@ -51,9 +51,11 @@ public class Game {
     Player newPlayer = new Player(nickname);
     players.add(newPlayer);
     scores.put(nickname, 0);
+    /*
     if ("j1".equals(nickname)) {
       scores.put(nickname, 3);
     }
+    */
     return true;
   }
 
@@ -292,6 +294,7 @@ public class Game {
     player.setAlive(false);
     TCPServer.broadcast("- " + player.getName() + " is out of the round.");
     TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
+    TCPServer.broadcast("- " + player.getName() + "'s discarded cards: " + player.getDiscardPile().toString());
 
     // Show remaining players and turn order
     List<Player> alivePlayers = getAlivePlayers();
@@ -304,7 +307,6 @@ public class Game {
         }
       }
       TCPServer.broadcast(remainingPlayers.toString());
-      TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
     }
   }
 
@@ -449,11 +451,14 @@ public class Game {
     for (Player winner : roundWinners) {
       TCPServer.broadcast("\n👑 Round " + round + " winner: " + winner.getName());
       awardToken(winner, false);
+      
       // Handle Jester targets
       for (Player player : players) {
         if (player.jesterTarget == winner) {
-          TCPServer.broadcast("Jester winner: " + player.getName());
-          awardToken(player, true);
+          TCPServer.broadcast(
+              "🃏 " + player.getName() + " gains a Token of Affection for correctly choosing "
+              + winner.getName() + " with Jester!");
+          awardToken(player, true);  // true means check for game end
         }
       }
     }
