@@ -1,5 +1,7 @@
 package com.example.loveletter;
 
+import java.util.Locale;
+
 import com.example.loveletter.effect.AssassinEffect;
 import com.example.loveletter.effect.BaronEffect;
 import com.example.loveletter.effect.BaronessEffect;
@@ -18,7 +20,6 @@ import com.example.loveletter.effect.PriestEffect;
 import com.example.loveletter.effect.PrinceEffect;
 import com.example.loveletter.effect.PrincessEffect;
 import com.example.loveletter.effect.SycophantEffect;
-import java.util.Locale;
 
 /**
  * Enumeration representing the cards in the Love Letter game.
@@ -158,15 +159,15 @@ public enum Card {
       new BishopEffect()),
 
   /**
-   * Dowager Queen card.
+   * DowagerQueen card.
    *
    * <p>When discarded, the player compares the card in hand with another player; the higher value
    * loses.
    */
-  DOWAGER_QUEEN(
+  DOWAGERQUEEN(
       7,
-      "Dowager Queen",
-      "When you discard the Dowager Queen, choose another player still in the round. You and that"
+      "DowagerQueen",
+      "When you discard the DowagerQueen, choose another player still in the round. You and that"
           + " player secretly compare your hands. The player with the higher number is knocked out"
           + " of the round. In case of a tie, nothing happens.",
       new DowagerQueenEffect()),
@@ -236,8 +237,11 @@ public enum Card {
   CARDINAL(
       10,
       "Cardinal",
-      "(Value: 10) When you discard the Cardinal, choose two players to swap hands. "
-          + "You may look at one of those player's new hand.",
+      "(Value: 10) When you discard the Cardinal, choose exactly 2 players (you may"
+          + "include yourself), who will switch hands. Then, once the hands are switched, you may"
+          + "look at the first target's hand without revealing it to any other players. If less than 2 players"
+          + "still in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is"
+          + "discarded without effect.",
       new CardinalEffect()),
 
   /**
@@ -299,7 +303,7 @@ public enum Card {
       case "countess" -> COUNTESS;
       case "princess" -> PRINCESS;
       case "bishop" -> BISHOP;
-      case "dowagerqueen", "dowager" -> DOWAGER_QUEEN;
+      case "dowagerqueen", "dowager" -> DOWAGERQUEEN;
       case "constable" -> CONSTABLE;
       case "count" -> COUNT;
       case "sycophant" -> SYCOPHANT;

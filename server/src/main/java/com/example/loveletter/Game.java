@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Represents the Love Letter game.
@@ -117,7 +118,9 @@ public class Game {
 
     // Send gameplay commands right after rules
     TCPServer.broadcast("\nGameplay commands:");
-    TCPServer.broadcast("- /play <card> [target] [guess] : Play a card");
+    TCPServer.broadcast(
+        "- /play <card> [target] [guess] : Play a card (guess must be a number indicating the"
+            + " values of the card you are guessing)");
     TCPServer.broadcast("- /hand : View your current hand");
     TCPServer.broadcast("- /score : View current scores");
     TCPServer.broadcast("- /explain <card> : Get card explanation");
@@ -377,18 +380,12 @@ public class Game {
   }
 
   /**
-   * Returns a list of players who are still alive in the current round.
-   *
-   * @return a list of alive players
+   * Returns a list of players still alive in the current round.
    */
-  private List<Player> getAlivePlayers() {
-    List<Player> alive = new ArrayList<>();
-    for (Player p : players) {
-      if (p.isAlive()) {
-        alive.add(p);
-      }
-    }
-    return alive;
+  public List<Player> getAlivePlayers() {
+    return players.stream()
+        .filter(Player::isAlive)
+        .collect(Collectors.toList());
   }
 
   /**
@@ -404,87 +401,173 @@ public class Game {
    */
   private void endRound() {
     List<Player> alive = getAlivePlayers();
-    Player roundWinner = null;
+    List<Player> roundWinners = new ArrayList<>(); // Changed to support multiple winners
+
     if (alive.size() == 1) {
-      roundWinner = alive.get(0);
+      roundWinners.add(alive.get(0));
     } else {
-      int highestValue = -1;
+      double highestValue = -1;
+      // First pass: find highest value
       for (Player p : alive) {
         if (!p.getHand().isEmpty()) {
-          int value = p.getHand().get(0).getValue();
+          Card card = p.getHand().get(0);
+          double value = card.getValue();
+          if (card == Card.BISHOP) {
+            value = 7.5;
+          }
+          value += p.countIncrease;
+          highestValue = Math.max(highestValue, value);
+        }
+      }
 
-          // Increase the value for each Count card found
+      // Second pass: find all players with highest value
+      int highestDiscardSum = -1;
+      for (Player p : alive) {
+        if (!p.getHand().isEmpty()) {
+          Card card = p.getHand().get(0);
+          double value = card.getValue();
+          if (card == Card.BISHOP) {
+            value = 7.5;
+          }
           value += p.countIncrease;
 
-          if (value > highestValue) {
-            highestValue = value;
-            roundWinner = p;
-          } else if (value == highestValue && roundWinner != null) {
-            // Tie-breaker: higher sum of discard pile values wins.
-            int currentSum = p.getDiscardPileSum();
-            int winnerSum = roundWinner.getDiscardPileSum();
-            if (currentSum > winnerSum) {
-              roundWinner = p;
+          if (value == highestValue) {
+            int discardSum = p.getDiscardPileSum();
+            if (discardSum > highestDiscardSum) {
+              roundWinners.clear();
+              roundWinners.add(p);
+              highestDiscardSum = discardSum;
+            } else if (discardSum == highestDiscardSum) {
+              roundWinners.add(p); // Add tied players
             }
           }
         }
       }
     }
-    if (roundWinner != null) {
-      TCPServer.broadcast("\n👑 Round " + round + " winner: " + roundWinner.getName());
-      awardToken(roundWinner, false);
+
+    // Award tokens to all winners
+    for (Player winner : roundWinners) {
+      TCPServer.broadcast("\n👑 Round " + round + " winner: " + winner.getName());
+      awardToken(winner, false);
+      // Handle Jester targets
       for (Player player : players) {
-        if (player.jesterTarget == roundWinner) {
+        if (player.jesterTarget == winner) {
           TCPServer.broadcast("Jester winner: " + player.getName());
           awardToken(player, true);
         }
       }
     }
+
+    // Check for game winners
+    int maxTokens = 0;
+    List<Player> gameWinners = new ArrayList<>();
     for (Player p : players) {
-      if (scores.getOrDefault(p.getName(), 0) >= tokensNeededToWin()) {
+      int tokens = scores.getOrDefault(p.getName(), 0);
+      if (tokens >= tokensNeededToWin()) {
+        if (tokens > maxTokens) {
+          gameWinners.clear();
+          gameWinners.add(p);
+          maxTokens = tokens;
+        } else if (tokens == maxTokens) {
+          gameWinners.add(p);
+        }
+      }
+    }
+
+    if (!gameWinners.isEmpty()) {
+      if (gameWinners.size() == 1) {
         endGame();
+      } else {
+        // Multiple winners - play tiebreaker round
+        TCPServer.broadcast("\n🎭 Multiple players have reached winning tokens!");
+        StringBuilder tiedPlayers = new StringBuilder("Tied players: ");
+        for (int i = 0; i < gameWinners.size(); i++) {
+          tiedPlayers.append(gameWinners.get(i).getName());
+          if (i < gameWinners.size() - 1) {
+            tiedPlayers.append(", ");
+          }
+        }
+        TCPServer.broadcast(tiedPlayers.toString());
+        TCPServer.broadcast("A tiebreaker round will be played between these players!");
+
+        // Start tiebreaker round with only tied players
+        startTiebreakerRound(gameWinners);
         return;
       }
     }
-    round++;
 
-    // Prepare for a new round: reset player statuses and clear hands/discard piles.
+    // Continue with normal round end...
+    startNextRound(roundWinners.isEmpty() ? null : roundWinners.get(0));
+  }
+
+  private void startTiebreakerRound(List<Player> tiebreakerPlayers) {
+    // Save non-tiebreaker players
+    List<Player> savedPlayers = new ArrayList<>(players);
+
+    // Clear and set only tiebreaker players
+    players.clear();
+    players.addAll(tiebreakerPlayers);
+
+    // Start new round with tiebreaker players
+    round++;
+    deck = new Deck(players.size());
+
+    // Reset player states for tiebreaker
     for (Player p : players) {
       p.setAlive(true);
       p.clearHand();
       p.clearDiscardPile();
-    }
-    deck.reset();
-
-    // Deal one card to each player.
-    for (Player p : players) {
       deck.draw(p);
     }
 
-    // The round winner starts the next round (or default to index 0 if no winner).
+    // Show tiebreaker status
+    showGameStatus("Tiebreaker Round " + round);
+
+    // Restore all players after tiebreaker
+    players.clear();
+    players.addAll(savedPlayers);
+  }
+
+  private void startNextRound(Player roundWinner) {
+    round++;
+    
+    // Prepare for a new round: reset player statuses and clear hands/discard piles
+    for (Player p : players) {
+        p.setAlive(true);
+        p.clearHand();
+        p.clearDiscardPile();
+    }
+    deck = new Deck(players.size());
+
+    // Deal one card to each player
+    for (Player p : players) {
+        Card dealtCard = deck.draw(p);
+        TCPServer.sendDirect(p.getName(), "\n🃏 " + dealtCard.getName() + " was added to your hand.");
+    }
+
+    // Set the round winner as first player (or default to index 0 if no winner)
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
 
-    // Show game status with turn order
-    StringBuilder status =
-        new StringBuilder(
-            String.format(
-                "\n🎮 Starting Round %d (%d players), turn order: ", round, players.size()));
+    // Show round status with turn order starting from winner
+    StringBuilder status = new StringBuilder(String.format("\n🎮 Starting Round %d (%d players), turn order: ", round, players.size()));
     for (int i = 0; i < players.size(); i++) {
-      int index = (currentPlayerIndex + i) % players.size();
-      status.append(players.get(index).getName());
-      if (i < players.size() - 1) {
-        status.append(" → ");
-      }
+        int index = (currentPlayerIndex + i) % players.size();
+        status.append(players.get(index).getName());
+        if (i < players.size() - 1) {
+            status.append(" → ");
+        }
     }
     TCPServer.broadcast(status.toString());
 
     // Show current scores
     for (Player p : players) {
-      TCPServer.broadcast(
-          "- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
+        TCPServer.broadcast("- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
     }
     TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
 
+    // Draw first card for the starting player
+    Card firstPlayerCard = deck.draw(getCurrentPlayer());
+    TCPServer.sendDirect(getCurrentPlayer().getName(), "🃏 " + firstPlayerCard.getName() + " was added to your hand.");
     TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
   }
 

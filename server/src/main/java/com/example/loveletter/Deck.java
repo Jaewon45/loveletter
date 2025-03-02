@@ -138,7 +138,7 @@ public final class Deck {
 
     cards.add(Card.COUNT);
 
-    cards.add(Card.DOWAGER_QUEEN);
+    cards.add(Card.DOWAGERQUEEN);
 
     cards.add(Card.BISHOP);
 

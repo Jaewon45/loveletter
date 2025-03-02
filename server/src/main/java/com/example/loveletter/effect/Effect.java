@@ -1,5 +1,8 @@
 package com.example.loveletter.effect;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
@@ -25,5 +28,18 @@ public interface Effect {
   // New method to indicate if effect needs a second target
   default boolean requiresSecondTarget() {
     return false;
+  }
+
+  /**
+   * Checks if there are any valid targets for the effect.
+   * If all other players are protected by Handmaid, the effect cannot target anyone.
+   */
+  default boolean hasValidTargets(Game game, Player currentPlayer) {
+    // Get all alive players except current player
+    List<Player> potentialTargets = game.getAlivePlayers().stream()
+        .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
+        .collect(Collectors.toList());
+
+    return !potentialTargets.isEmpty();
   }
 }

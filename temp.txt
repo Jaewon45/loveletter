@@ -714,7 +714,7 @@ import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 
 /**
- * Represents the effect of the Dowager Queen card. The player compares their hand with another
+ * Represents the effect of the DowagerQueen card. The player compares their hand with another
  * player; the higher value loses.
  */
 public class DowagerQueenEffect implements Effect {
@@ -730,7 +730,7 @@ public class DowagerQueenEffect implements Effect {
     TCPServer.broadcast(
         "- "
             + currentPlayer.getName()
-            + " uses Dowager Queen targeting "
+            + " uses DowagerQueen targeting "
             + targetPlayer.getName()
             + ".");
 
@@ -2511,15 +2511,15 @@ public enum Card {
       new BishopEffect()),
 
   /**
-   * Dowager Queen card.
+   * DowagerQueen card.
    *
    * <p>When discarded, the player compares the card in hand with another player; the higher value
    * loses.
    */
   DOWAGER_QUEEN(
       7,
-      "Dowager Queen",
-      "When you discard the Dowager Queen, choose another player still in the round. You and that"
+      "DowagerQueen",
+      "When you discard the DowagerQueen, choose another player still in the round. You and that"
           + " player secretly compare your hands. The player with the higher number is knocked out"
           + " of the round. In case of a tie, nothing happens.",
       new DowagerQueenEffect()),

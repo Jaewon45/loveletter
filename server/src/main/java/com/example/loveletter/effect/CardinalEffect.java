@@ -1,11 +1,13 @@
 package com.example.loveletter.effect;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
@@ -16,17 +18,21 @@ public class CardinalEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || secondTarget == null) {
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "Invalid target: Cardinal requires exactly two players to swap hands.");
-      return false;
+    // Cardinal needs two targets that aren't protected
+    List<Player> validTargets = game.getAlivePlayers().stream()
+        .filter(p -> !p.isProtectedByHandmaid())
+        .collect(Collectors.toList());
+    
+    if (validTargets.size() < 2) {
+        TCPServer.broadcast("- " + currentPlayer.getName() + " discards Cardinal with no effect (not enough valid targets).");
+        return true;
     }
 
-    if (!targetPlayer.isAlive() || !secondTarget.isAlive()) {
-      TCPServer.sendDirect(
-          currentPlayer.getName(), "Invalid target: Both players must be in the round.");
-      return false;
+    if (targetPlayer == null || secondTarget == null || 
+        !targetPlayer.isAlive() || !secondTarget.isAlive() ||
+        targetPlayer.isProtectedByHandmaid() || secondTarget.isProtectedByHandmaid()) {
+        TCPServer.sendDirect(currentPlayer.getName(), "Invalid targets: Both players must be in the round and not protected.");
+        return false;
     }
 
     // Swap hands between target players
@@ -44,8 +50,12 @@ public class CardinalEffect implements Effect {
             + secondTarget.getName()
             + " swap hands.");
 
+    Player viewplayer = targetPlayer;
+    if (viewplayer == currentPlayer) {
+      viewplayer = secondTarget;
+    }
     // Let current player peek at one of the hands (first target's hand)
-    game.revealHandToPlayer(currentPlayer, targetPlayer);
+    game.revealHandToPlayer(currentPlayer, viewplayer);
 
     return true;
   }

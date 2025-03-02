@@ -22,7 +22,12 @@ public class PriestEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast("- " + currentPlayer.getName() + " discards Priest with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }

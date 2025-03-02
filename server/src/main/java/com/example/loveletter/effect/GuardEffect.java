@@ -25,12 +25,19 @@ public class GuardEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     // Must name a value other than 1, guess in [2..8]
-    if (targetPlayer == null || guess < 2 || guess > 8) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid guess or no target.");
+    if (guess < 2 || guess > 8) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid guess value (2-8).");
       return false;
     }
-    if (!targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Guard: target is already knocked out.");
+
+    // Check if there are any valid targets
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast("- " + currentPlayer.getName() + " discards Guard with no effect (no valid targets).");
+      return true;  // Card is still discarded
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid target.");
       return false;
     }
 

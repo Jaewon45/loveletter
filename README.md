@@ -15,14 +15,14 @@ change in config.properties
 
 ## Building and Running
 
-1. Build and test the project: 
+1. Build and startthe project: 
 
 2. Run the server:
 ```bash
 ./gradlew server:run
 ```
 
-3. Run the client (in a separate terminal):
+3. Run the client (in a separate terminal for each player):
 ```bash
 ./gradlew client:run
 ```
