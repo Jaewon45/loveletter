@@ -1,16 +1,20 @@
 package com.example.loveletter.effect;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 
 /**
- * Prince Effect - Prince (5).
+ * Prince Effect - Prince Arnaud (5).
  *
- * <p>When you discard the Prince, choose a player (including yourself) who must discard their hand
- * and draw a new card. If the discarded card is the Princess, that player is knocked out of the
- * round.
+ * <p>When you discard Prince Arnaud, choose one player (including yourself) to discard their hand 
+ * and draw a new card. If the Princess is discarded this way, that player is eliminated. If the 
+ * deck is empty, the player draws the face-down card from the start of the round. If all other 
+ * players are protected by the Handmaid, you must choose yourself.
  */
 public class PrinceEffect implements Effect {
 
@@ -26,34 +30,27 @@ public class PrinceEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Prince: No valid target or target is out.");
+    if (targetPlayer == null) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
       return false;
     }
 
-    // Force discard
-    if (!targetPlayer.getHand().isEmpty()) {
-      Card cardToDiscard = targetPlayer.getHand().get(0);
-      if (cardToDiscard.getValue() == 8) {
-        TCPServer.broadcast(
-            "Prince: " + targetPlayer.getName() + " discarded the Princess and is eliminated.");
+    // Force discard of current hand
+    List<Card> discardedCards = new ArrayList<>(targetPlayer.getHand());
+    targetPlayer.clearHand();
+    
+    // Announce the discard
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Prince. " + 
+        targetPlayer.getName() + " discards " + discardedCards.get(0).getName() + ".");
+    
+    // Show discard pile
+    TCPServer.broadcast("- " + targetPlayer.getName() + "'s discarded cards: " + discardedCards);
 
-        game.eliminatePlayer(targetPlayer);
-        return true;
-      } else {
-        TCPServer.broadcast(
-            "Prince: " + targetPlayer.getName() + " discards " + cardToDiscard.toString() + ".");
-        targetPlayer.discard(cardToDiscard);
-        game.getDeck().draw(targetPlayer);
-      }
-    }
+    // Draw new card silently and then announce it
+    Card newCard = game.getDeck().draw(targetPlayer, true);
+    TCPServer.sendDirect(targetPlayer.getName(), "🃏 " + newCard.getName() + " was added to your hand.");
+    TCPServer.broadcast(targetPlayer.getName() + " draws a new card.");
 
-    // If target is still alive, draw a new card
-    if (targetPlayer.isAlive()) {
-      game.getDeck().draw(targetPlayer);
-      TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.");
-      return true;
-    }
-    return false;
+    return true;
   }
 }

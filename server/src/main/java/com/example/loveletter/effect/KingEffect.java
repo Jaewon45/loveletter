@@ -24,11 +24,11 @@ public class KingEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "King: No valid target or target is out.");
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }
 
-    // Swap cards (in standard Love Letter, each player has exactly 1 card)
+    // Swap cards
     if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
       Card myCard =
           currentPlayer.getHand().stream()
@@ -37,22 +37,19 @@ public class KingEffect implements Effect {
               .orElse(null);
       Card theirCard = targetPlayer.getHand().get(0);
 
+      // Public announcement
+      TCPServer.broadcast("- " + currentPlayer.getName() + " uses King targeting " + targetPlayer.getName() + ".");
+
+      // Perform swap
       currentPlayer.addCard(theirCard);
       targetPlayer.addCard(myCard);
       currentPlayer.removeCard(myCard);
       targetPlayer.removeCard(theirCard);
 
-      TCPServer.broadcast(
-          "King: " + currentPlayer.getName() + " swapped hands with " + targetPlayer.getName());
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "King: You swapped hands with "
-              + targetPlayer.getName()
-              + ". Your new card: "
-              + theirCard);
-      TCPServer.sendDirect(
-          targetPlayer.getName(),
-          "King: You swapped hands with " + currentPlayer.getName() + ". Your new card: " + myCard);
+      // Announce card movements to all players
+      TCPServer.broadcast("- " + theirCard.getName() + " was added to " + currentPlayer.getName() + "'s hand.");
+      TCPServer.broadcast("- " + myCard.getName() + " was added to " + targetPlayer.getName() + "'s hand.");
+      
       return true;
     }
     return false;

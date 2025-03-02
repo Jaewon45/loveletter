@@ -104,17 +104,47 @@ public class Game {
     }
     started = true;
     round = 1;
+    
+    // Send game rules before starting
+    TCPServer.broadcast("\n📜 Game Overview: Each player starts with one card. On your turn, draw a card and discard one, applying its effect. Effects may eliminate players or provide advantages. A round ends when all but one player is eliminated or the deck is empty. The player with the highest card wins the round and earns a Token of Affection. The first player to collect the required number of tokens wins the game.");
+
+    // Send gameplay commands right after rules
+    TCPServer.broadcast("\nGameplay commands:");
+    TCPServer.broadcast("- /play <card> [target] [guess] : Play a card");
+    TCPServer.broadcast("- /hand : View your current hand");
+    TCPServer.broadcast("- /score : View current scores");
+    TCPServer.broadcast("- /explain <card> : Get card explanation");
+    TCPServer.broadcast("- /values : View all card values\n");
+    
+    // Show current game status
+    showGameStatus("Game Setup");
+    
+    // Initialize game and deal cards
     deck = new Deck(players.size());
-    // Reset all players for the new round
     for (Player p : players) {
-      p.clearHand();
-      p.clearDiscardPile();
-      p.setAlive(true);
-      deck.draw(p);
+        p.clearHand();
+        p.clearDiscardPile();
+        p.setAlive(true);
+        Card dealtCard = deck.draw(p, true);
+        TCPServer.sendDirect(p.getName(), "\n🃏 " + dealtCard.getName() + " was added to your hand.");
     }
-    // Set first player (for simplicity, index 0)
+    
+    // Announce game start and turn order
+    StringBuilder turnOrder = new StringBuilder("\n🎮 Game begins! Turn order: ");
+    for (int i = 0; i < players.size(); i++) {
+        turnOrder.append(players.get(i).getName());
+        if (i < players.size() - 1) {
+            turnOrder.append(" → ");
+        }
+    }
+    TCPServer.broadcast(turnOrder.toString());
+    
+    // Set and announce first player
     currentPlayerIndex = 0;
-    deck.draw(getCurrentPlayer());
+    Card firstPlayerCard = deck.draw(getCurrentPlayer(), true);
+    TCPServer.sendDirect(getCurrentPlayer().getName(), "🃏 " + firstPlayerCard.getName() + " was added to your hand.");
+    TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
+    TCPServer.sendDirect(getCurrentPlayer().getName(), "It's your turn! Type /hand to see your cards.");
   }
 
   /**
@@ -147,14 +177,30 @@ public class Game {
       endRound();
       return false;
     }
-    // Advance to next alive player.
+
+    // Advance to next alive player
     do {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     } while (!players.get(currentPlayerIndex).isAlive());
-    // Current player draws a card if available.
+    
+    // Clear Handmaid protection at the start of player's turn
+    Player currentPlayer = getCurrentPlayer();
+    if (currentPlayer.isProtectedByHandmaid()) {
+      currentPlayer.clearHandmaidProtection();
+      TCPServer.broadcast("- " + currentPlayer.getName() + "'s Handmaid protection has ended.");
+    }
+    
+    // Announce turn to all players
+    TCPServer.broadcast("\nCurrent turn: " + currentPlayer.getName());
+    
+    // Send private message to current player
+    TCPServer.sendDirect(currentPlayer.getName(), "It's your turn! Type /hand to see your cards.");
+    
+    // Current player draws a card if available
     if (!deck.isEmpty()) {
-      deck.draw(players.get(currentPlayerIndex));
-      checkCountessRule(players.get(currentPlayerIndex));
+        Card drawnCard = deck.draw(getCurrentPlayer(), true);
+        TCPServer.sendDirect(getCurrentPlayer().getName(), "🃏 " + drawnCard.getName() + " was added to your hand.");
+        checkCountessRule(getCurrentPlayer());
     }
     return true;
   }
@@ -207,23 +253,15 @@ public class Game {
     boolean legalMove =
         cardToDiscard.getEffect().apply(this, currentPlayer, target, guess, secondTarget);
     if (!legalMove) {
-      TCPServer.sendDirect(
-          currentPlayer.getName(), "Illegal move with " + cardToDiscard.getName() + "!");
-      return false;
-    }
-    // Broadcast the discard action.
-
-    String message = currentPlayer.getName() + " discards " + cardToDiscard.getName() + "!";
-    if (target != null) {
-      message += " Their target was " + target.getName() + ".";
-    }
-    if (guess != -1) {
-      message += " Their guess was " + guess + ".";
+        TCPServer.sendDirect(
+            currentPlayer.getName(), 
+            "Type /explain " + cardToDiscard.getName().toLowerCase() + 
+            " to see how this card works.");
+        return false;
     }
 
-    TCPServer.broadcast(message);
+    // Remove the redundant broadcast message
     currentPlayer.getHand().remove(cardToDiscard);
-    // Add to discard pile (assumes the player maintains a discard pile).
     currentPlayer.addToDiscardPile(cardToDiscard);
     if (cardToDiscard.getValue() == 8) {
       eliminatePlayer(currentPlayer);
@@ -232,20 +270,27 @@ public class Game {
   }
 
   /**
-   * Eliminates (knocks out) a player from the current round.
+   * Eliminates a player from the round.
    *
-   * @param p the player to eliminate
+   * @param player the player to eliminate
    */
-  public void eliminatePlayer(Player p) {
-    p.setAlive(false);
-    TCPServer.broadcast(p.getName() + " has been knocked out of the round!", p.getName());
-    TCPServer.sendDirect(p.getName(), "You have been knocked out of the round");
-    for (Card card : p.getDiscardPile()) {
-      if (card.equals(Card.CONSTABLE)) {
-        TCPServer.broadcast(
-            p.getName() + " had a Constable in their discard pile, they gain a token of affection");
-        awardToken(p, true);
-      }
+  public void eliminatePlayer(Player player) {
+    player.setAlive(false);
+    TCPServer.broadcast("- " + player.getName() + " is out of the round.");
+    TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
+    
+    // Show remaining players and turn order
+    List<Player> alivePlayers = getAlivePlayers();
+    if (alivePlayers.size() > 1) {
+        StringBuilder remainingPlayers = new StringBuilder("\nRemaining players: ");
+        for (int i = 0; i < alivePlayers.size(); i++) {
+            remainingPlayers.append(alivePlayers.get(i).getName());
+            if (i < alivePlayers.size() - 1) {
+                remainingPlayers.append(" → ");
+            }
+        }
+        TCPServer.broadcast(remainingPlayers.toString());
+        TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
     }
   }
 
@@ -375,7 +420,7 @@ public class Game {
       }
     }
     if (roundWinner != null) {
-      TCPServer.broadcast("Round " + round + " winner: " + roundWinner.getName());
+      TCPServer.broadcast("\n👑 Round " + round + " winner: " + roundWinner.getName());
       awardToken(roundWinner, false);
       for (Player player : players) {
         if (player.jesterTarget == roundWinner) {
@@ -391,22 +436,49 @@ public class Game {
       }
     }
     round++;
-
-    TCPServer.broadcast("Starting new Round");
-
+    
     // Prepare for a new round: reset player statuses and clear hands/discard piles.
     for (Player p : players) {
-      p.setAlive(true);
-      p.clearHand();
-      p.clearDiscardPile();
+        p.setAlive(true);
+        p.clearHand();
+        p.clearDiscardPile();
     }
     deck.reset();
+
     // Deal one card to each player.
     for (Player p : players) {
-      deck.draw(p);
+        deck.draw(p);
     }
+
     // The round winner starts the next round (or default to index 0 if no winner).
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
+
+    // Show game status with turn order
+    StringBuilder status = new StringBuilder(String.format("\n🎮 Starting Round %d (%d players), turn order: ", round, players.size()));
+    for (int i = 0; i < players.size(); i++) {
+        int index = (currentPlayerIndex + i) % players.size();
+        status.append(players.get(index).getName());
+        if (i < players.size() - 1) {
+            status.append(" → ");
+        }
+    }
+    TCPServer.broadcast(status.toString());
+    
+    // Show current scores
+    for (Player p : players) {
+        TCPServer.broadcast("- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
+    }
+    TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
+    
+    TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
+  }
+
+  private void showGameStatus(String header) {
+    TCPServer.broadcast("\n🎮 " + header + " (" + players.size() + " players):");
+    for (Player p : players) {
+        TCPServer.broadcast("- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
+    }
+    TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
   }
 
   /**
@@ -446,63 +518,53 @@ public class Game {
    * @param guess an additional parameter used by some card effects (e.g., Guard)
    * @param secondTarget the second target for effects that target 2 players
    */
-  void playCard(String nickname, String cardName, String target, int guess, String secondTarget)
-      throws Exception {
-    // Locate the player by nickname.
-    Player player = getPlayerByNickname(nickname);
-    if (player == null) {
-      throw new Exception("Internal Error: Player '" + nickname + "' not found.");
+  void playCard(CardAction action) {
+    Player currentPlayer = getPlayerByNickname(action.getPlayerName());
+    if (currentPlayer == null) {
+        throw new IllegalArgumentException("Player '" + action.getPlayerName() + "' not found");
     }
-    if (!player.isAlive()) {
-      throw new Exception("Internal Error: Player '" + nickname + "' is not alive.");
+    if (!currentPlayer.isAlive()) {
+        throw new IllegalArgumentException("Player '" + action.getPlayerName() + "' is not alive");
     }
 
-    // Search for the card in the player's hand (case-insensitive comparison).
-    Card cardToPlay = null;
-    for (Card card : player.getHand()) {
-      if (card.getName().equalsIgnoreCase(cardName)) {
-        cardToPlay = card;
-        break;
-      }
-    }
-    if (cardToPlay == null) {
-      TCPServer.sendDirect(nickname, "Error: Card '" + cardName + "' not found in your hand.");
-      throw new Exception("Error: Card '" + cardName + "' not found in player's hand.");
+    // Search for the card in the player's hand
+    Card card = action.getCard();
+    if (!currentPlayer.getHand().contains(card)) {
+        throw new IllegalArgumentException("Card '" + card.getName() + "' not found in player's hand");
     }
 
-    // If a target is specified, attempt to locate the target player.
     Player targetPlayer = null;
-    if (target != null && !target.trim().isEmpty()) {
-      targetPlayer = getPlayerByNickname(target);
-      if (targetPlayer == null) {
-        TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
-        throw new Exception("Error: Target Player '" + target + "' not found.");
-      }
-      if (forcedTarget != null) {
-        TCPServer.broadcast("Forced target:  '" + forcedTarget);
-
-        targetPlayer = forcedTarget;
-        forcedTarget = null;
-      }
+    if (action.getTarget() != null) {
+        targetPlayer = getPlayerByNickname(action.getTarget());
+        if (targetPlayer == null) {
+            throw new IllegalArgumentException("Target player '" + action.getTarget() + "' not found");
+        }
     }
 
-    Player secondTargetPlayer = null;
-    if (secondTarget != null && !secondTarget.trim().isEmpty()) {
-      secondTargetPlayer = getPlayerByNickname(secondTarget);
-      if (secondTargetPlayer == null) {
-        TCPServer.sendDirect(nickname, "Error: Target Player '" + secondTarget + "' not found.");
-        throw new Exception("Error: Target Player '" + secondTarget + "' not found.");
-      }
+    Player secondTarget = null;
+    if (action.getSecondTarget() != null) {
+        secondTarget = getPlayerByNickname(action.getSecondTarget());
+        if (secondTarget == null) {
+            throw new IllegalArgumentException("Second target player '" + action.getSecondTarget() + "' not found");
+        }
     }
 
-    // Discard the card, which applies its effect.
-    boolean legal = discardCard(player, cardToPlay, targetPlayer, guess, secondTargetPlayer);
-    if (!legal) {
-      throw new Exception("Internal Error: Illegal move with " + cardToPlay.getName() + "!");
+    // Validate the action based on card type
+    if (card.getEffect().requiresSecondTarget() && secondTarget == null) {
+        throw new IllegalArgumentException("This card requires two targets");
+    }
+    
+    if (card == Card.GUARD && action.getGuess() == -1) {
+        throw new IllegalArgumentException("Guard requires a guess");
     }
 
-    // Advance the turn. Note: if the round ends (e.g. deck empty or only one player alive),
-    // nextTurn() will call endRound(), and turn advancement is not applicable.
+    // Apply the card effect
+    boolean success = discardCard(currentPlayer, card, targetPlayer, action.getGuess(), secondTarget);
+    if (!success) {
+        throw new IllegalStateException("Failed to apply card effect");
+    }
+
+    // Advance the turn
     nextTurn();
   }
 
@@ -596,5 +658,15 @@ public class Game {
       }
       default -> throw new IllegalStateException("Unexpected number of players: " + players.size());
     }
+  }
+
+  /**
+   * Checks if a player with the given nickname is in the game.
+   *
+   * @param nickname the nickname to check
+   * @return true if the player is in the game, false otherwise
+   */
+  public boolean hasPlayer(String nickname) {
+    return players.stream().anyMatch(p -> p.getName().equals(nickname));
   }
 }

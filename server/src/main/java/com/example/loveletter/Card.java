@@ -1,5 +1,7 @@
 package com.example.loveletter;
 
+import java.util.Locale;
+
 import com.example.loveletter.effect.AssassinEffect;
 import com.example.loveletter.effect.BaronEffect;
 import com.example.loveletter.effect.BaronessEffect;
@@ -18,7 +20,6 @@ import com.example.loveletter.effect.PriestEffect;
 import com.example.loveletter.effect.PrinceEffect;
 import com.example.loveletter.effect.PrincessEffect;
 import com.example.loveletter.effect.SycophantEffect;
-import java.util.Locale;
 
 /**
  * Enumeration representing the cards in the Love Letter game.
@@ -36,7 +37,7 @@ public enum Card {
   GUARD(
       1,
       "Guard",
-      "When you discard the Guard, choose a player and name a number (other than 1). If that player"
+      "(Value: 1) When you discard the Guard, choose a player and name a number (other than 1). If that player"
           + " has that number in their hand, that player is knocked out of the round. If all other"
           + " players still in the round cannot be chosen (eg. due to Handmaid or Sycophant), this"
           + " card is discarded without effect.",
@@ -49,7 +50,7 @@ public enum Card {
   PRIEST(
       2,
       "Priest",
-      "When you discard the Priest, you can look at another player's hand. Do not reveal the hand"
+      "(Value: 2) When you discard the Priest, you can look at another player's hand privately. Do not reveal the hand"
           + " to any other players.",
       new PriestEffect()),
   /**
@@ -61,7 +62,7 @@ public enum Card {
   BARON(
       3,
       "Baron",
-      "When you discard the Baron, choose another player still in the round. You and that player"
+      "(Value: 3) When you discard the Baron, choose another player still in the round. You and that player"
           + " secretly compare your hands. The player with the lower number is knocked out of the"
           + " round. In case of a tie, nothing happens.",
       new BaronEffect()),
@@ -74,7 +75,7 @@ public enum Card {
   HANDMAID(
       4,
       "Handmaid",
-      "When you discard the Handmaid, you are immune to the effects of other players' cards until"
+      "(Value: 4) When you discard the Handmaid, you are immune to the effects of other players' cards until"
           + " the start of your next turn. If all players other than the player whose turn it is"
           + " are protected by the Handmaid, the player must choose him or herself for a card's"
           + " effects, if possible",
@@ -88,11 +89,10 @@ public enum Card {
   PRINCE(
       5,
       "Prince",
-      "When you discard Prince Arnaud, choose one player still in the round (including yourself)."
-          + " That player discards his or her hand (but doesn't apply its effect, unless it is the"
-          + " Princess, see page 8) and draws a new one. If the deck is empty and the player cannot"
-          + " draw a card, that player draws the card that was removed at the start of the round."
-          + " If all other players are protected by the Handmaid, you must choose yourself.",
+      "(Value: 5) When you discard Prince Arnaud, choose one player (including yourself) to discard their hand " +
+      "and draw a new card. If the Princess is discarded this way, that player is eliminated. If the " +
+      "deck is empty, the player draws the face-down card from the start of the round. If all other " +
+      "players are protected by the Handmaid, you must choose yourself.",
       new PrinceEffect()),
   /**
    * King card.
@@ -102,7 +102,7 @@ public enum Card {
   KING(
       6,
       "King",
-      "When you discard King Arnaud IV, trade the card in your hand with the card held by another"
+      "(Value: 6) When you discard King Arnaud IV, trade the card in your hand with the card held by another"
           + " player of your choice. You cannot trade with a player who is out of the round",
       new KingEffect()),
   /**
@@ -114,12 +114,10 @@ public enum Card {
   COUNTESS(
       7,
       "Countess",
-      "like other cards, which take effect when discarded, the text on the Countess applies while"
-          + " she is in your hand. In fact, the only time it doesn't apply is when you discard her."
-          + " If you ever have the Countess and either the King or Prince in your hand, you must"
-          + " discard the Countess. You do not have to reveal the other card in your hand. Of"
-          + " course, you can also discard the Countess even if you do not have a royal family"
-          + " member in your hand. The Countess likes to play mind games....",
+      "(Value: 7) The Countess must be discarded if you have either the King or Prince in your hand. This rule " +
+      "applies while she is in your hand, not when she is played. You don't need to show the other card " +
+      "when discarding her. You may also choose to discard the Countess even without holding the King " +
+      "or Prince.",
       new CountessEffect()),
   /**
    * Princess card.
@@ -130,7 +128,7 @@ public enum Card {
   PRINCESS(
       8,
       "Princess",
-      "If you discard the Princess—no matter how or why—she has tossed your letter into the fire."
+      "(Value: 8) If you discard the Princess—no matter how or why—she has tossed your letter into the fire."
           + " You are immediately knocked out of the round. If the Princess was discarded by a card"
           + " effect, any remaining effects of that card do not apply (you do not draw a card from"
           + " the Prince, for example). Effects tied to being knocked out the round still apply"
@@ -235,11 +233,10 @@ public enum Card {
    * then look at one of the hands without revealing it to others.
    */
   CARDINAL(
-      2,
+      10,
       "Cardinal",
-      "When you discard the Cardinal, choose exactly 2 players (you may include yourself), who will"
-          + " switch hands. Then, once the hands are switched, you may look at one of them without"
-          + " revealing it to any other players.",
+      "(Value: 10) When you discard the Cardinal, choose two players to swap hands. " +
+      "You may look at one of those player's new hand.",
       new CardinalEffect()),
 
   /**
@@ -251,10 +248,8 @@ public enum Card {
   JESTER(
       0,
       "Jester",
-      "When you discard the Jester, choose another player—ideally, the one you believe is most"
-          + " likely to win the round. If you're correct, and your chosen player does win the"
-          + " round, you gain a Token of Affection. If this would give you enough Tokens to win the"
-          + " game, then you win immediately and the game ends.",
+      "(Value: 0) When you discard the Jester, choose two players (can include yourself). " +
+      "Guess which of them will win this round. If you're right, gain a token.",
       new JesterEffect()),
 
   /**
@@ -293,25 +288,28 @@ public enum Card {
   }
 
   public static Card getCard(String name) {
-    return switch (name.toLowerCase(Locale.ENGLISH)) { // Q: can it be shorter
-      case "guard" -> GUARD;
-      case "priest" -> PRIEST;
-      case "baron" -> BARON;
-      case "handmaid" -> HANDMAID;
-      case "prince" -> PRINCE;
-      case "king" -> KING;
-      case "countess" -> COUNTESS;
-      case "princess" -> PRINCESS;
-      case "bishop" -> BISHOP;
-      case "dowager queen" -> DOWAGER_QUEEN;
-      case "constable" -> CONSTABLE;
-      case "count" -> COUNT;
-      case "sycophant" -> SYCOPHANT;
-      case "baroness" -> BARONESS;
-      case "cardinal" -> CARDINAL;
-      case "jester" -> JESTER;
-      case "assassin" -> ASSASSIN;
-      default -> null;
+    // Remove spaces and convert to lowercase for comparison
+    String normalizedName = name.toLowerCase(Locale.ENGLISH).replaceAll("\\s+", "");
+    
+    return switch (normalizedName) {
+        case "guard" -> GUARD;
+        case "priest" -> PRIEST;
+        case "baron" -> BARON;
+        case "handmaid" -> HANDMAID;
+        case "prince" -> PRINCE;
+        case "king" -> KING;
+        case "countess" -> COUNTESS;
+        case "princess" -> PRINCESS;
+        case "bishop" -> BISHOP;
+        case "dowagerqueen", "dowager" -> DOWAGER_QUEEN;
+        case "constable" -> CONSTABLE;
+        case "count" -> COUNT;
+        case "sycophant" -> SYCOPHANT;
+        case "baroness" -> BARONESS;
+        case "cardinal" -> CARDINAL;
+        case "jester" -> JESTER;
+        case "assassin" -> ASSASSIN;
+        default -> null;
     };
   }
 

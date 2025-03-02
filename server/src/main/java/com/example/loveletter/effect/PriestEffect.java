@@ -1,6 +1,5 @@
 package com.example.loveletter.effect;
 
-import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
@@ -24,18 +23,17 @@ public class PriestEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Priest: No valid target or target is out.");
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }
 
     if (!targetPlayer.getHand().isEmpty()) {
-      Card card = targetPlayer.getHand().get(0);
-      TCPServer.broadcast(
-          "Priest: " + currentPlayer.getName() + " sees " + targetPlayer.getName() + "'s hand ");
-
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "Priest: " + targetPlayer.getName() + "'s hand: " + card.getName());
+      // Public announcement
+      TCPServer.broadcast("- " + currentPlayer.getName() + " uses Priest targeting " + targetPlayer.getName() + ".");
+      
+      // Private reveal
+      TCPServer.sendDirect(currentPlayer.getName(), 
+          "- Card Revealed: " + targetPlayer.getName() + " holds " + targetPlayer.getHand().toString());
       return true;
     }
     return false;

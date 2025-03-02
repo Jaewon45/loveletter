@@ -85,6 +85,7 @@ public class DowagerQueenEffect implements Effect {
     if (targetPlayer == null || currentPlayer == targetPlayer) {
       return false; // Must choose another player
     }
+
     int currentValue = currentPlayer.getHand().get(0).getValue();
     int targetValue = targetPlayer.getHand().get(0).getValue();
     if (currentValue > targetValue) {
@@ -137,7 +138,7 @@ public class GuardEffect implements Effect {
 
     // Check if the target's card matches the guess
     if (!targetPlayer.getHand().isEmpty()) {
-      Card theirCard = targetPlayer.getHand().get(0); // Standard Love Letter: 1 card per hand
+      Card theirCard = targetPlayer.getHand().get(0);
       // StringBuilder message = new StringBuilder();
       // if (currentPlayer.getName() != null) {
       //   message.append(currentPlayer.getName()).append(" plays: their target player is ");
@@ -147,7 +148,11 @@ public class GuardEffect implements Effect {
       // }
       // message.append(guess).append(".");
       // TCPServer.broadcast(message.toString());
-      if (theirCard.getValue() == guess) {
+      if (theirCard.equals(Card.ASSASSIN)) {
+        game.eliminatePlayer(currentPlayer);
+        targetPlayer.discard(theirCard);
+        game.drawCardFor(targetPlayer);
+      } else if (theirCard.getValue() == guess) {
         game.eliminatePlayer(targetPlayer);
       } else {
         System.out.println("Guard: Guess was incorrect!");
@@ -215,6 +220,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Sycophant card. Forces the next player to target the selected player
@@ -229,6 +235,7 @@ public class SycophantEffect implements Effect {
       return false; // Target is required
     }
     game.setForcedTarget(targetPlayer);
+    TCPServer.broadcast("Jester: the next player has to target:" + targetPlayer.getName());
     return true;
   }
 }
@@ -267,6 +274,7 @@ public class BaronEffect implements Effect {
       TCPServer.sendDirect(currentPlayer.getName(), "Baron: No valid target.");
       return false;
     }
+
     // Compare card values
     if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
       Card myCard = currentPlayer.getLowest();
@@ -319,8 +327,9 @@ public class BishopEffect implements Effect {
     if (targetPlayer == null || guess < 1 || guess > 8) {
       return false;
     }
+
     if (targetPlayer.getHand().get(0).getValue() == guess) {
-      game.awardToken(currentPlayer);
+      game.awardToken(currentPlayer, true);
       targetPlayer.discard(targetPlayer.getHand().get(0));
       game.drawCardFor(targetPlayer);
     }
@@ -381,6 +390,7 @@ public class PriestEffect implements Effect {
       TCPServer.sendDirect(currentPlayer.getName(), "Priest: No valid target or target is out.");
       return false;
     }
+
     if (!targetPlayer.getHand().isEmpty()) {
       Card card = targetPlayer.getHand().get(0);
       TCPServer.broadcast(
@@ -423,6 +433,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Baroness card. Allows the player to look at the hands of one or two
@@ -436,6 +447,9 @@ public class BaronessEffect implements Effect {
     if (targetPlayer == null) {
       return false;
     }
+
+    TCPServer.broadcast(
+        "Baroness: Showing " + currentPlayer.getName() + targetPlayer.getName() + "'s hand");
     game.revealHandToPlayer(currentPlayer, targetPlayer);
     return true;
   }
@@ -562,6 +576,7 @@ public class JesterEffect implements Effect {
     if (targetPlayer == null) {
       return false; // Target is required
     }
+
     currentPlayer.setJesterTarget(targetPlayer);
     return true;
   }
@@ -644,6 +659,7 @@ public class PrinceEffect implements Effect {
       TCPServer.sendDirect(currentPlayer.getName(), "Prince: No valid target or target is out.");
       return false;
     }
+
     // Force discard
     if (!targetPlayer.getHand().isEmpty()) {
       Card cardToDiscard = targetPlayer.getHand().get(0);
@@ -1466,6 +1482,56 @@ public class Game {
     p.setAlive(false);
     TCPServer.broadcast(p.getName() + " has been knocked out of the round!", p.getName());
     TCPServer.sendDirect(p.getName(), "You have been knocked out of the round");
+    for (Card card : p.getDiscardPile()) {
+      if (card.equals(Card.CONSTABLE)) {
+        TCPServer.broadcast(
+            p.getName() + " had a Constable in their discard pile, they gain a token of affection");
+        awardToken(p, true);
+      }
+    }
+  }
+
+  private void endGame() {
+    // Find the winner (player with most tokens)
+    Player winner = null;
+    int maxTokens = -1;
+
+    for (Player player : players) {
+      int tokens = scores.get(player.getName());
+      if (tokens > maxTokens) {
+        maxTokens = tokens;
+        winner = player;
+      }
+    }
+
+    if (winner != null) {
+      // Broadcast game end messages
+      TCPServer.broadcast("🎉 GAME OVER! 🎉");
+      TCPServer.broadcast(
+          winner.getName() + " has won the game with " + maxTokens + " tokens of affection!");
+      TCPServer.broadcast("Final Scores: " + scores.toString());
+    }
+
+    // Reset game state
+    started = false;
+    currentPlayerIndex = 0;
+    round = 0;
+    deck = null;
+
+    // Clear player states
+    for (Player p : players) {
+      p.clearHand();
+      p.clearDiscardPile();
+      p.setAlive(true);
+      p.jesterTarget = null;
+    }
+
+    // Clear scores
+    scores.clear();
+
+    // Broadcast final message
+    TCPServer.broadcast("Type /end to end the game!");
+    TCPServer.broadcast("Type /create to start a new game!");
   }
 
   /**
@@ -1552,12 +1618,18 @@ public class Game {
     }
     if (roundWinner != null) {
       TCPServer.broadcast("Round " + round + " winner: " + roundWinner.getName());
-      scores.put(roundWinner.getName(), scores.get(roundWinner.getName()) + 1);
+      awardToken(roundWinner, false);
       for (Player player : players) {
         if (player.jesterTarget == roundWinner) {
           TCPServer.broadcast("Jester winner: " + player.getName());
-          scores.put(player.getName(), scores.get(player.getName()) + 1);
+          awardToken(player, true);
         }
+      }
+    }
+    for (Player p : players) {
+      if (scores.get(p.getName()) >= tokensNeededToWin()) {
+        endGame();
+        return;
       }
     }
     round++;
@@ -1614,6 +1686,7 @@ public class Game {
    * @param cardName the name of the card to be played
    * @param target the nickname of the target player (may be {@code null} or empty if not required)
    * @param guess an additional parameter used by some card effects (e.g., Guard)
+   * @param secondTarget the second target for effects that target 2 players
    */
   void playCard(String nickname, String cardName, String target, int guess, String secondTarget)
       throws Exception {
@@ -1646,6 +1719,12 @@ public class Game {
       if (targetPlayer == null) {
         TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
         throw new Exception("Error: Target Player '" + target + "' not found.");
+      }
+      if (forcedTarget != null) {
+        TCPServer.broadcast("Forced target:  '" + forcedTarget);
+
+        targetPlayer = forcedTarget;
+        forcedTarget = null;
       }
     }
 
@@ -1702,17 +1781,12 @@ public class Game {
   }
 
   /**
-   * Retrieves a second target player for the Cardinal effect.
+   * Returns the forced target player.
    *
-   * @param currentPlayer The player playing the Cardinal.
-   * @param targetPlayer The first target chosen.
-   * @return A second eligible player if available, otherwise null.
+   * @return the forced target player, or {@code null} if no forced target is set
    */
-  public Player getSecondTarget(Player currentPlayer, Player targetPlayer) {
-    return players.stream()
-        .filter(p -> p != currentPlayer && p != targetPlayer && p.isAlive())
-        .findFirst()
-        .orElse(null);
+  public Player getForcedTarget() {
+    return forcedTarget;
   }
 
   /**
@@ -1723,7 +1797,8 @@ public class Game {
    */
   public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
     TCPServer.sendDirect(
-        currentPlayer.getName(), "Target's hand: " + targetPlayer.getHand().toString());
+        currentPlayer.getName(),
+        targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString());
   }
 
   /**
@@ -1731,8 +1806,11 @@ public class Game {
    *
    * @param currentPlayer The player receiving the token.
    */
-  public void awardToken(Player currentPlayer) {
+  public void awardToken(Player currentPlayer, boolean endGameIfEnough) {
     scores.put(currentPlayer.getName(), scores.getOrDefault(currentPlayer.getName(), 0) + 1);
+    if (scores.get(currentPlayer.getName()) >= tokensNeededToWin()) {
+      endGame();
+    }
   }
 
   /**
@@ -1743,6 +1821,22 @@ public class Game {
   public void drawCardFor(Player targetPlayer) {
     if (!deck.isEmpty()) {
       deck.draw(targetPlayer);
+    }
+  }
+
+  /** Returns the number of tokens needed to win based on player count. */
+  private int tokensNeededToWin() {
+    switch (players.size()) {
+      case 2 -> {
+        return 7;
+      }
+      case 3 -> {
+        return 5;
+      }
+      case 4, 5, 6, 7, 8 -> {
+        return 4;
+      }
+      default -> throw new IllegalStateException("Unexpected number of players: " + players.size());
     }
   }
 }
@@ -1929,7 +2023,7 @@ public class TCPServer {
 
   private static final Logger LOGGER =
       Logger.getLogger(
-          TCPServer.class.getName()); // Other classes don’t need to access the server's logger
+          TCPServer.class.getName()); // Other classes don't need to access the server's logger
 
   /**
    * Port on which the server listens (default: 12345, can be overridden via system property
@@ -2112,7 +2206,22 @@ public class TCPServer {
           }
           clients.put(nickname, this);
         }
-        out.println("welcome " + nickname);
+
+        // Send welcome messages
+        send("Welcome " + nickname + "!");
+        send("\nTokens needed to win:");
+        send("- 2 players: 7 tokens");
+        send("- 3 players: 5 tokens");
+        send("- 4+ players: 4 tokens");
+        send("\nAvailable commands:");
+        send("- /create : Create a new game");
+        send("- /join : Join an existing game");
+        send("- /start : Start the game (2-4 players needed)");
+        send("- /play <card> [target] [guess] : Play a card");
+        send("- /hand : View your current hand");
+        send("- /score : View current scores");
+        send("- /explain <card> : Get card explanation");
+
         broadcast(nickname + " joined the room", this);
 
         String message;

@@ -26,7 +26,12 @@ public class BaronEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Baron: No valid target.");
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
+      return false;
+    }
+
+    if (targetPlayer == currentPlayer) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Cannot target yourself with Baron.");
       return false;
     }
 
@@ -35,27 +40,27 @@ public class BaronEffect implements Effect {
       Card myCard = currentPlayer.getLowest();
       Card theirCard = targetPlayer.getLowest();
 
-      String message =
-          "Baron: "
-              + currentPlayer.getName()
-              + " ("
-              + myCard.getValue()
-              + ") vs. "
-              + targetPlayer.getName()
-              + " ("
-              + theirCard.getValue()
-              + ")";
+      // Public announcement
+      TCPServer.broadcast("- " + currentPlayer.getName() + " uses Baron targeting " + targetPlayer.getName() + ".");
 
-      TCPServer.sendDirect(currentPlayer.getName(), message);
-      TCPServer.sendDirect(targetPlayer.getName(), message);
+      // Private reveals
+      String compareResult = "- Card Comparison: " + currentPlayer.getName() + " (" + myCard.getName() + 
+          " - " + myCard.getValue() + ") vs " + targetPlayer.getName() + " (" + theirCard.getName() + 
+          " - " + theirCard.getValue() + ")";
+      TCPServer.sendDirect(currentPlayer.getName(), compareResult);
+      TCPServer.sendDirect(targetPlayer.getName(), compareResult);
 
+      // Result announcement and elimination
       if (myCard.getValue() > theirCard.getValue()) {
+        TCPServer.broadcast("- " + targetPlayer.getName() + " is eliminated (lower value).");
         game.eliminatePlayer(targetPlayer);
       } else if (myCard.getValue() < theirCard.getValue()) {
+        TCPServer.broadcast("- " + currentPlayer.getName() + " is eliminated (lower value).");
         game.eliminatePlayer(currentPlayer);
       } else {
-        TCPServer.broadcast("Baron: Tie => nothing happens.");
+        TCPServer.broadcast("- The values were equal - no effect.");
       }
+
       return true;
     }
     return false;

@@ -2,6 +2,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Jester card. If the chosen player wins the round, the current player
@@ -13,10 +14,17 @@ public class JesterEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null) {
-      return false; // Target is required
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
+      return false;
     }
 
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
     currentPlayer.setJesterTarget(targetPlayer);
+    return true;
+  }
+
+  @Override
+  public boolean requiresSecondTarget() {
     return true;
   }
 }

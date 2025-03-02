@@ -7,9 +7,10 @@ import com.example.loveletter.TCPServer;
 /**
  * Countess Effect - Countess Wilhelmina (7).
  *
- * <p>Discarding the Countess has no immediate effect. However, if you hold the Countess along with
- * the King or Prince, you must discard the Countess. That rule is enforced elsewhere (e.g., during
- * the draw or discard process).
+ * <p>The Countess must be discarded if you have either the King or Prince in your hand. This rule 
+ * applies while she is in your hand, not when she is played. You don't need to show the other card 
+ * when discarding her. You may also choose to discard the Countess even without holding the King 
+ * or Prince.
  */
 public class CountessEffect implements Effect {
 
@@ -24,7 +25,7 @@ public class CountessEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    TCPServer.broadcast("Countess: No effect on discard.");
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Countess.");
     return true;
   }
 }

@@ -21,4 +21,9 @@ public interface Effect {
    */
   boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget);
+
+  // New method to indicate if effect needs a second target
+  default boolean requiresSecondTarget() {
+    return false;
+  }
 }

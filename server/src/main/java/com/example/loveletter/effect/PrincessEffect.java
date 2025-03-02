@@ -25,8 +25,7 @@ public class PrincessEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    TCPServer.broadcast(
-        "Princess discarded, Player " + currentPlayer.getName() + " has been eliminated.");
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Princess and is eliminated.");
     game.eliminatePlayer(currentPlayer);
     return true;
   }

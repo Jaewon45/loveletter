@@ -196,35 +196,30 @@ public class TCPServer {
                 true);
 
         // First message must be the nickname.
-        nickname = in.readLine();
-        if (nickname == null || nickname.trim().isEmpty()) {
-          socket.close();
-          return;
-        }
-        synchronized (clients) {
-          if (clients.containsKey(nickname)) {
-            try (socket) {
-              out.println("Nickname already in use. Connection closed.");
+        boolean nicknameAccepted = false;
+        while (!nicknameAccepted) {
+            nickname = in.readLine();
+            if (nickname == null || nickname.trim().isEmpty()) {
+                send("Error: Nickname cannot be empty. Please try again.");
+                continue;
             }
-            return;
-          }
-          clients.put(nickname, this);
+            synchronized (clients) {
+                if (clients.containsKey(nickname)) {
+                    send("Error: Nickname already in use. Please try again.");
+                    continue;
+                }
+                clients.put(nickname, this);
+                nicknameAccepted = true;
+            }
         }
 
         // Send welcome messages
         send("Welcome " + nickname + "!");
-        send("\nTokens needed to win:");
-        send("- 2 players: 7 tokens");
-        send("- 3 players: 5 tokens");
-        send("- 4+ players: 4 tokens");
         send("\nAvailable commands:");
         send("- /create : Create a new game");
         send("- /join : Join an existing game");
-        send("- /start : Start the game (2-4 players needed)");
-        send("- /play <card> [target] [guess] : Play a card");
-        send("- /hand : View your current hand");
-        send("- /score : View current scores");
-        send("- /explain <card> : Get card explanation");
+        send("- /start : Start the game (2-8 players needed)");
+        send("- /dm <player> <message> : Send a private message to a player");
 
         broadcast(nickname + " joined the room", this);
 
@@ -236,7 +231,7 @@ public class TCPServer {
           if (message.startsWith("/")) {
             // Process command messages.
             processCommand(message);
-          } else {
+          } else if (!message.trim().isEmpty()) {  // Only broadcast non-empty messages
             // Regular chat message.
             broadcast(nickname + ": " + message);
           }
@@ -273,6 +268,7 @@ public class TCPServer {
      *   <li><code>/hand</code> - Shows the player's hand during an active game.
      *   <li><code>/explain &lt;card&gt;</code> - Explains the card.
      *   <li><code>/end</code> - Ends the current game.
+     *   <li><code>/values</code> - Shows all card values.
      * </ul>
      *
      * @param message the command message received from the client
@@ -312,27 +308,27 @@ public class TCPServer {
             send("Error: No game available. Create one with /create.");
           } else if (currentGame.isStarted()) {
             send("Error: Game already started.");
+          } else if (currentGame.hasPlayer(nickname)) {
+            send("Error: You have already joined this game.");
           } else {
             if (currentGame.addPlayer(nickname)) {
               broadcast(nickname + " joined the game");
             } else {
-              send("Error: Unable to join game.");
+              send("Error: Game is full. Maximum 8 players allowed.");
             }
           }
         }
         case "/start" -> {
-          // Start the game if player count is between 2 and 4.
           if (currentGame == null) {
             send("Error: No game to start.");
           } else if (currentGame.isStarted()) {
             send("Error: Game already started.");
-          } else if (currentGame.getPlayerCount() < 2 || currentGame.getPlayerCount() > 4) {
-            send("Error: Need between 2 and 4 players to start the game.");
+          } else if (!currentGame.hasPlayer(nickname)) {
+            send("Error: You must join the game first with /join before starting.");
+          } else if (currentGame.getPlayerCount() < 2 || currentGame.getPlayerCount() > 8) {
+            send("Error: Need between 2 and 8 players to start the game.");
           } else {
             currentGame.start();
-            broadcast("Game started!");
-            // Additional game notifications (e.g., indicating whose turn it is) should be handled
-            // in the Game class.
           }
         }
         case "/end" -> {
@@ -345,47 +341,60 @@ public class TCPServer {
           }
         }
         case "/play" -> {
-          // Play a card command: /play <card> [target guess]
+          // Play a card command: /play <card> [target] [guess]
           if (currentGame == null || !currentGame.isStarted()) {
-            send("Error: No active game in progress.");
-            break;
+              send("Error: No active game in progress.");
+              break;
           }
-          if (tokens.length < 2) {
-            send("Error: Usage /play <card> [target guess]");
-            break;
+          // Split into more tokens to handle card, target, and guess separately
+          String[] playTokens = message.split(" ");
+          if (playTokens.length < 2) {
+              send("Error: Usage /play <card> [target] [guess]");
+              break;
           }
           if (!currentGame.getCurrentPlayer().getName().equals(nickname)) {
-            send("It's not your turn");
+              send("It's not your turn");
+              break;
           }
 
-          String cardName = tokens[1];
-          String target = null;
-          String secondTarget = null;
-          int guess = -1;
-          if (tokens.length >= 3) {
-            // Expecting target and optionally a guess value.
-            String[] params = tokens[2].split(" ");
-            if (params.length >= 1) {
-              target = params[0];
-            }
-            if (params.length >= 2) {
-              try {
-                guess = Integer.parseInt(params[1]);
-              } catch (NumberFormatException e) {
-                send("Error: Guess must be an integer.");
-                break;
+          String cardName = playTokens[1].toLowerCase();
+          Card card = Card.getCard(cardName);
+          if (card == null) {
+              send("Error: Unknown card " + cardName);
+              break;
+          }
+
+          CardAction.Builder actionBuilder = new CardAction.Builder(nickname, card);
+
+          // Parse parameters based on card requirements
+          if (card.getEffect().requiresSecondTarget()) {
+              if (playTokens.length < 4) {
+                  send("Error: This card requires two target players");
+                  break;
               }
-            }
-            if (params.length >= 3) {
-              secondTarget = params[2];
-            }
+              actionBuilder.withTarget(playTokens[2])
+                          .withSecondTarget(playTokens[3]);
+          } else {
+              if (playTokens.length >= 3) {
+                  actionBuilder.withTarget(playTokens[2]);
+              }
+              if (playTokens.length >= 4) {
+                  try {
+                      actionBuilder.withGuess(Integer.parseInt(playTokens[3]));
+                  } catch (NumberFormatException e) {
+                      send("Error: Guess must be a number");
+                      break;
+                  }
+              }
           }
-          // Call the game logic to play a card.
-          try {
 
-            currentGame.playCard(nickname, cardName, target, guess, secondTarget);
-          } catch (Exception e) {
-            send("Error: Unable to play card " + cardName + " : " + e.toString());
+          try {
+              currentGame.playCard(actionBuilder.build());
+          } catch (IllegalArgumentException e) {
+              send("Error: " + e.getMessage());
+          } catch (IllegalStateException e) {
+              // Don't print the "Failed to apply card effect" message
+              // Only print the specific error from the card effect
           }
         }
         case "/score" -> {
@@ -417,6 +426,17 @@ public class TCPServer {
               send(card.getDescription());
             }
           }
+        }
+        case "/values" -> {
+            // Show all card values
+            StringBuilder values = new StringBuilder("Card Values:\n");
+            for (Card card : Card.values()) {
+                values.append(card.getValue())
+                      .append(" - ")
+                      .append(card.getName())
+                      .append("\n");
+            }
+            send(values.toString());
         }
         default -> send("Error: Unknown command.");
       }
