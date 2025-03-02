@@ -236,11 +236,11 @@ public enum Card {
   CARDINAL(
       2,
       "Cardinal",
-      "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you mayinclude"
-          + " yourself), who will switch hands. Then, once the hands are switched, you maylook at"
-          + " the first target's hand without revealing it to any other players. If less than 2"
-          + " playersstill in the round can be chosen, (eg. due to Handmaid or Sycophant), this"
-          + " card isdiscarded without effect.",
+      "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you may include"
+          + " yourself), who will switch hands. Then, once the hands are switched, you may look at"
+          + " one of them without revealing it to any other players. If less than 2 players still"
+          + " in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is"
+          + " discarded without effect.",
       new CardinalEffect()),
 
   /**
