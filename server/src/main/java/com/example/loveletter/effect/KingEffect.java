@@ -38,7 +38,8 @@ public class KingEffect implements Effect {
       Card theirCard = targetPlayer.getHand().get(0);
 
       // Public announcement
-      TCPServer.broadcast("- " + currentPlayer.getName() + " uses King targeting " + targetPlayer.getName() + ".");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " uses King targeting " + targetPlayer.getName() + ".");
 
       // Perform swap
       currentPlayer.addCard(theirCard);
@@ -47,9 +48,7 @@ public class KingEffect implements Effect {
       targetPlayer.removeCard(theirCard);
 
       // Announce card movements to all players
-      TCPServer.broadcast("- " + theirCard.getName() + " was added to " + currentPlayer.getName() + "'s hand.");
-      TCPServer.broadcast("- " + myCard.getName() + " was added to " + targetPlayer.getName() + "'s hand.");
-      
+      // TODO(j1): broadcast message about hand swapping
       return true;
     }
     return false;

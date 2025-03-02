@@ -11,6 +11,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -198,19 +199,19 @@ public class TCPServer {
         // First message must be the nickname.
         boolean nicknameAccepted = false;
         while (!nicknameAccepted) {
-            nickname = in.readLine();
-            if (nickname == null || nickname.trim().isEmpty()) {
-                send("Error: Nickname cannot be empty. Please try again.");
-                continue;
+          nickname = in.readLine();
+          if (nickname == null || nickname.trim().isEmpty()) {
+            send("Error: Nickname cannot be empty. Please try again.");
+            continue;
+          }
+          synchronized (clients) {
+            if (clients.containsKey(nickname)) {
+              send("Error: Nickname already in use. Please try again.");
+              continue;
             }
-            synchronized (clients) {
-                if (clients.containsKey(nickname)) {
-                    send("Error: Nickname already in use. Please try again.");
-                    continue;
-                }
-                clients.put(nickname, this);
-                nicknameAccepted = true;
-            }
+            clients.put(nickname, this);
+            nicknameAccepted = true;
+          }
         }
 
         // Send welcome messages
@@ -231,7 +232,7 @@ public class TCPServer {
           if (message.startsWith("/")) {
             // Process command messages.
             processCommand(message);
-          } else if (!message.trim().isEmpty()) {  // Only broadcast non-empty messages
+          } else if (!message.trim().isEmpty()) { // Only broadcast non-empty messages
             // Regular chat message.
             broadcast(nickname + ": " + message);
           }
@@ -343,58 +344,57 @@ public class TCPServer {
         case "/play" -> {
           // Play a card command: /play <card> [target] [guess]
           if (currentGame == null || !currentGame.isStarted()) {
-              send("Error: No active game in progress.");
-              break;
+            send("Error: No active game in progress.");
+            break;
           }
           // Split into more tokens to handle card, target, and guess separately
           String[] playTokens = message.split(" ");
           if (playTokens.length < 2) {
-              send("Error: Usage /play <card> [target] [guess]");
-              break;
+            send("Error: Usage /play <card> [target] [guess]");
+            break;
           }
           if (!currentGame.getCurrentPlayer().getName().equals(nickname)) {
-              send("It's not your turn");
-              break;
+            send("It's not your turn");
+            break;
           }
 
-          String cardName = playTokens[1].toLowerCase();
+          String cardName = playTokens[1].toLowerCase(Locale.ENGLISH);
           Card card = Card.getCard(cardName);
           if (card == null) {
-              send("Error: Unknown card " + cardName);
-              break;
+            send("Error: Unknown card " + cardName);
+            break;
           }
 
           CardAction.Builder actionBuilder = new CardAction.Builder(nickname, card);
 
           // Parse parameters based on card requirements
           if (card.getEffect().requiresSecondTarget()) {
-              if (playTokens.length < 4) {
-                  send("Error: This card requires two target players");
-                  break;
-              }
-              actionBuilder.withTarget(playTokens[2])
-                          .withSecondTarget(playTokens[3]);
+            if (playTokens.length < 4) {
+              send("Error: This card requires two target players");
+              break;
+            }
+            actionBuilder.withTarget(playTokens[2]).withSecondTarget(playTokens[3]);
           } else {
-              if (playTokens.length >= 3) {
-                  actionBuilder.withTarget(playTokens[2]);
+            if (playTokens.length >= 3) {
+              actionBuilder.withTarget(playTokens[2]);
+            }
+            if (playTokens.length >= 4) {
+              try {
+                actionBuilder.withGuess(Integer.parseInt(playTokens[3]));
+              } catch (NumberFormatException e) {
+                send("Error: Guess must be a number");
+                break;
               }
-              if (playTokens.length >= 4) {
-                  try {
-                      actionBuilder.withGuess(Integer.parseInt(playTokens[3]));
-                  } catch (NumberFormatException e) {
-                      send("Error: Guess must be a number");
-                      break;
-                  }
-              }
+            }
           }
 
           try {
-              currentGame.playCard(actionBuilder.build());
+            currentGame.playCard(actionBuilder.build());
           } catch (IllegalArgumentException e) {
-              send("Error: " + e.getMessage());
+            send("Error: " + e.getMessage());
           } catch (IllegalStateException e) {
-              // Don't print the "Failed to apply card effect" message
-              // Only print the specific error from the card effect
+            // Don't print the "Failed to apply card effect" message
+            // Only print the specific error from the card effect
           }
         }
         case "/score" -> {
@@ -428,15 +428,12 @@ public class TCPServer {
           }
         }
         case "/values" -> {
-            // Show all card values
-            StringBuilder values = new StringBuilder("Card Values:\n");
-            for (Card card : Card.values()) {
-                values.append(card.getValue())
-                      .append(" - ")
-                      .append(card.getName())
-                      .append("\n");
-            }
-            send(values.toString());
+          // Show all card values
+          StringBuilder values = new StringBuilder("Card Values:\n");
+          for (Card card : Card.values()) {
+            values.append(card.getValue()).append(" - ").append(card.getName()).append("\n");
+          }
+          send(values.toString());
         }
         default -> send("Error: Unknown command.");
       }

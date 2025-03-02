@@ -18,10 +18,12 @@ public class BishopEffect implements Effect {
       return false;
     }
 
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Bishop targeting " + targetPlayer.getName() + ".");
-    
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Bishop targeting " + targetPlayer.getName() + ".");
+
     if (targetPlayer.getHand().get(0).getValue() == guess) {
-      TCPServer.broadcast("- The guess was correct! " + currentPlayer.getName() + " gains a Token of Affection.");
+      TCPServer.broadcast(
+          "- The guess was correct! " + currentPlayer.getName() + " gains a Token of Affection.");
       game.awardToken(currentPlayer, true);
       targetPlayer.discard(targetPlayer.getHand().get(0));
       game.drawCardFor(targetPlayer);

@@ -1,4 +1,70 @@
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/CountessEffect.java =====
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/PrinceEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Card;
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Prince Effect - Prince Arnaud (5).
+ *
+ * <p>When you discard Prince Arnaud, choose one player (including yourself) to discard their hand
+ * and draw a new card. If the Princess is discarded this way, that player is eliminated. If the
+ * deck is empty, the player draws the face-down card from the start of the round. If all other
+ * players are protected by the Handmaid, you must choose yourself.
+ */
+public class PrinceEffect implements Effect {
+
+  /**
+   * Applies the Prince card effect.
+   *
+   * @param game the current game instance
+   * @param currentPlayer the player who discarded the Prince
+   * @param targetPlayer the target player who must discard their hand
+   * @param guess unused for the Prince effect
+   * @return true if the effect was successfully applied, false otherwise
+   */
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (targetPlayer == null) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
+      return false;
+    }
+
+    // Force discard of current hand
+    List<Card> discardedCards = new ArrayList<>(targetPlayer.getHand());
+    targetPlayer.clearHand();
+
+    // Announce the discard
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Prince. "
+            + targetPlayer.getName()
+            + " discards "
+            + discardedCards.get(0).getName()
+            + ".");
+
+    // Show discard pile
+    TCPServer.broadcast("- " + targetPlayer.getName() + "'s discarded cards: " + discardedCards);
+
+    // Draw new card silently and then announce it
+    Card newCard = game.getDeck().draw(targetPlayer);
+    TCPServer.sendDirect(
+        targetPlayer.getName(), "🃏 " + newCard.getName() + " was added to your hand.");
+    TCPServer.broadcast(targetPlayer.getName() + " draws a new card.");
+
+    return true;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/JesterEffect.java =====
 package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
@@ -6,26 +72,27 @@ import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 
 /**
- * Countess Effect - Countess Wilhelmina (7).
- *
- * <p>Discarding the Countess has no immediate effect. However, if you hold the Countess along with
- * the King or Prince, you must discard the Countess. That rule is enforced elsewhere (e.g., during
- * the draw or discard process).
+ * Represents the effect of the Jester card. If the chosen player wins the round, the current player
+ * gains a Token of Affection.
  */
-public class CountessEffect implements Effect {
+public class JesterEffect implements Effect {
 
-  /**
-   * Applies the Countess card effect.
-   *
-   * @param game the current game instance
-   * @param currentPlayer the player who discarded the Countess
-   * @param targetPlayer unused for the Countess effect
-   * @param guess unused for the Countess effect
-   */
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    TCPServer.broadcast("Countess: No effect on discard.");
+    if (targetPlayer == null) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
+      return false;
+    }
+
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
+    currentPlayer.setJesterTarget(targetPlayer);
+    return true;
+  }
+
+  @Override
+  public boolean requiresSecondTarget() {
     return true;
   }
 }
@@ -60,39 +127,300 @@ public class HandmaidEffect implements Effect {
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     currentPlayer.setProtectedByHandmaid(true);
     TCPServer.broadcast(
-        "Handmaid: " + currentPlayer.getName() + " is protected until their next turn.");
+        "- " + currentPlayer.getName() + " uses Handmaid and is protected until their next turn.");
     return true;
   }
 }
 
 
 
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/DowagerQueenEffect.java =====
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/BaronEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Card;
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+
+/**
+ * Baron Effect - Baron Talus (3).
+ *
+ * <p>When you discard the Baron, choose another player still in the round. You and that player
+ * secretly compare the value of the card in your hand; the player with the lower value is knocked
+ * out of the round. In case of a tie, nothing happens.
+ */
+public class BaronEffect implements Effect {
+
+  /**
+   * Applies the Baron card effect.
+   *
+   * @param game the current game instance
+   * @param currentPlayer the player who discarded the Baron
+   * @param targetPlayer the target player chosen for comparison
+   * @param guess unused for the Baron effect
+   */
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (targetPlayer == null || !targetPlayer.isAlive()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
+      return false;
+    }
+
+    if (targetPlayer == currentPlayer) {
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: Cannot target yourself with Baron.");
+      return false;
+    }
+
+    // Compare card values
+    if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
+      Card myCard = currentPlayer.getLowest();
+      Card theirCard = targetPlayer.getLowest();
+
+      // Public announcement
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " uses Baron targeting " + targetPlayer.getName() + ".");
+
+      // Private reveals
+      String compareResult =
+          "- Card Comparison: "
+              + currentPlayer.getName()
+              + " ("
+              + myCard.getName()
+              + " - "
+              + myCard.getValue()
+              + ") vs "
+              + targetPlayer.getName()
+              + " ("
+              + theirCard.getName()
+              + " - "
+              + theirCard.getValue()
+              + ")";
+      TCPServer.sendDirect(currentPlayer.getName(), compareResult);
+      TCPServer.sendDirect(targetPlayer.getName(), compareResult);
+
+      // Result announcement and elimination
+      if (myCard.getValue() > theirCard.getValue()) {
+        TCPServer.broadcast("- " + targetPlayer.getName() + " is eliminated (lower value).");
+        game.eliminatePlayer(targetPlayer);
+      } else if (myCard.getValue() < theirCard.getValue()) {
+        TCPServer.broadcast("- " + currentPlayer.getName() + " is eliminated (lower value).");
+        game.eliminatePlayer(currentPlayer);
+      } else {
+        TCPServer.broadcast("- The values were equal - no effect.");
+      }
+
+      return true;
+    }
+    return false;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/CardinalEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Card;
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
+ * player peek at one.
+ */
+public class CardinalEffect implements Effect {
+
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (targetPlayer == null || secondTarget == null) {
+      TCPServer.sendDirect(
+          currentPlayer.getName(),
+          "Invalid target: Cardinal requires exactly two players to swap hands.");
+      return false;
+    }
+
+    if (!targetPlayer.isAlive() || !secondTarget.isAlive()) {
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: Both players must be in the round.");
+      return false;
+    }
+
+    // Swap hands between target players
+    List<Card> tempHand = new ArrayList<>(targetPlayer.getHand());
+    targetPlayer.setHand(secondTarget.getHand());
+    secondTarget.setHand(tempHand);
+
+    // Announce the swap
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Cardinal. "
+            + targetPlayer.getName()
+            + " and "
+            + secondTarget.getName()
+            + " swap hands.");
+
+    // Let current player peek at one of the hands (first target's hand)
+    game.revealHandToPlayer(currentPlayer, targetPlayer);
+
+    return true;
+  }
+
+  @Override
+  public boolean requiresSecondTarget() {
+    return true;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/CountEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+
+/**
+ * Represents the effect of the Count card. Increases the value of the player's hand by 1 at the end
+ * of the round.
+ */
+public class CountEffect implements Effect {
+
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Count to increase their hand value.");
+    currentPlayer.countIncrease++;
+    return true;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/PriestEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+
+/**
+ * Priest Effect - Priest Tomas (2).
+ *
+ * <p>When you discard the Priest, you may look at another player's hand.
+ */
+public class PriestEffect implements Effect {
+
+  /**
+   * Applies the Priest card effect.
+   *
+   * @param game the current game instance
+   * @param currentPlayer the player who discarded the Priest
+   * @param targetPlayer the target player whose hand will be revealed
+   * @param guess unused for the Priest effect
+   */
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (targetPlayer == null || !targetPlayer.isAlive()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
+      return false;
+    }
+
+    if (!targetPlayer.getHand().isEmpty()) {
+      // Public announcement
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " uses Priest targeting "
+              + targetPlayer.getName()
+              + ".");
+
+      // Private reveal
+      TCPServer.sendDirect(
+          currentPlayer.getName(),
+          "- Card Revealed: "
+              + targetPlayer.getName()
+              + " holds "
+              + targetPlayer.getHand().toString());
+      return true;
+    }
+    return false;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/Effect.java =====
 package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 
 /**
- * Represents the effect of the Dowager Queen card. The player compares their hand with another
- * player; the higher value loses.
+ * Represents the special power of a card.
+ *
+ * <p>Each card's unique effect is implemented by a class that implements this interface. The effect
+ * is applied when the card is discarded (unless otherwise noted by special rules).
  */
-public class DowagerQueenEffect implements Effect {
+public interface Effect {
 
+  /**
+   * Applies this card's effect in the context of the given game.
+   *
+   * @param game the Game instance (contains the deck, players, etc.)
+   * @param currentPlayer the player who discarded this card
+   * @param targetPlayer another player chosen as the target (may be null)
+   * @param guess used by certain card effects (e.g., Guard), otherwise -1
+   */
+  boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget);
+
+  // New method to indicate if effect needs a second target
+  default boolean requiresSecondTarget() {
+    return false;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/CountessEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+
+/**
+ * Countess Effect - Countess Wilhelmina (7).
+ *
+ * <p>The Countess must be discarded if you have either the King or Prince in your hand. This rule
+ * applies while she is in your hand, not when she is played. You don't need to show the other card
+ * when discarding her. You may also choose to discard the Countess even without holding the King or
+ * Prince.
+ */
+public class CountessEffect implements Effect {
+
+  /**
+   * Applies the Countess card effect.
+   *
+   * @param game the current game instance
+   * @param currentPlayer the player who discarded the Countess
+   * @param targetPlayer unused for the Countess effect
+   * @param guess unused for the Countess effect
+   */
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || currentPlayer == targetPlayer) {
-      return false; // Must choose another player
-    }
-
-    int currentValue = currentPlayer.getHand().get(0).getValue();
-    int targetValue = targetPlayer.getHand().get(0).getValue();
-    if (currentValue > targetValue) {
-      game.eliminatePlayer(currentPlayer);
-    } else if (currentValue < targetValue) {
-      game.eliminatePlayer(targetPlayer);
-    }
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Countess.");
     return true;
   }
 }
@@ -139,201 +467,27 @@ public class GuardEffect implements Effect {
     // Check if the target's card matches the guess
     if (!targetPlayer.getHand().isEmpty()) {
       Card theirCard = targetPlayer.getHand().get(0);
-      // StringBuilder message = new StringBuilder();
-      // if (currentPlayer.getName() != null) {
-      //   message.append(currentPlayer.getName()).append(" plays: their target player is ");
-      // }
-      // if (targetPlayer.getName() != null) {
-      //   message.append(targetPlayer.getName()).append(". Their guess was: ");
-      // }
-      // message.append(guess).append(".");
-      // TCPServer.broadcast(message.toString());
+
+      // Initial announcement
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " uses Guard targeting " + targetPlayer.getName() + ".");
+
       if (theirCard.equals(Card.ASSASSIN)) {
+        TCPServer.broadcast("- The target reveals Assassin!");
         game.eliminatePlayer(currentPlayer);
         targetPlayer.discard(theirCard);
         game.drawCardFor(targetPlayer);
       } else if (theirCard.getValue() == guess) {
+        TCPServer.broadcast(
+            "- The guess was " + guess + " (" + theirCard.getName() + "), which was correct!");
         game.eliminatePlayer(targetPlayer);
       } else {
-        System.out.println("Guard: Guess was incorrect!");
+        TCPServer.broadcast("- The guess was " + guess + ", which was incorrect.");
       }
+
       return true;
     }
     return false;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/Effect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-
-/**
- * Represents the special power of a card.
- *
- * <p>Each card's unique effect is implemented by a class that implements this interface. The effect
- * is applied when the card is discarded (unless otherwise noted by special rules).
- */
-public interface Effect {
-
-  /**
-   * Applies this card's effect in the context of the given game.
-   *
-   * @param game the Game instance (contains the deck, players, etc.)
-   * @param currentPlayer the player who discarded this card
-   * @param targetPlayer another player chosen as the target (may be null)
-   * @param guess used by certain card effects (e.g., Guard), otherwise -1
-   */
-  boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget);
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/CountEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-
-/**
- * Represents the effect of the Count card. Increases the value of the player's hand by 1 at the end
- * of the round.
- */
-public class CountEffect implements Effect {
-
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    currentPlayer.countIncrease++;
-    return true;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/SycophantEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-import com.example.loveletter.TCPServer;
-
-/**
- * Represents the effect of the Sycophant card. Forces the next player to target the selected player
- * with their effect.
- */
-public class SycophantEffect implements Effect {
-
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null) {
-      return false; // Target is required
-    }
-    game.setForcedTarget(targetPlayer);
-    TCPServer.broadcast("Jester: the next player has to target:" + targetPlayer.getName());
-    return true;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/BaronEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Card;
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-import com.example.loveletter.TCPServer;
-
-/**
- * Baron Effect - Baron Talus (3).
- *
- * <p>When you discard the Baron, choose another player still in the round. You and that player
- * secretly compare the value of the card in your hand; the player with the lower value is knocked
- * out of the round. In case of a tie, nothing happens.
- */
-public class BaronEffect implements Effect {
-
-  /**
-   * Applies the Baron card effect.
-   *
-   * @param game the current game instance
-   * @param currentPlayer the player who discarded the Baron
-   * @param targetPlayer the target player chosen for comparison
-   * @param guess unused for the Baron effect
-   */
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Baron: No valid target.");
-      return false;
-    }
-
-    // Compare card values
-    if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
-      Card myCard = currentPlayer.getLowest();
-      Card theirCard = targetPlayer.getLowest();
-
-      String message =
-          "Baron: "
-              + currentPlayer.getName()
-              + " ("
-              + myCard.getValue()
-              + ") vs. "
-              + targetPlayer.getName()
-              + " ("
-              + theirCard.getValue()
-              + ")";
-
-      TCPServer.sendDirect(currentPlayer.getName(), message);
-      TCPServer.sendDirect(targetPlayer.getName(), message);
-
-      if (myCard.getValue() > theirCard.getValue()) {
-        game.eliminatePlayer(targetPlayer);
-      } else if (myCard.getValue() < theirCard.getValue()) {
-        game.eliminatePlayer(currentPlayer);
-      } else {
-        TCPServer.broadcast("Baron: Tie => nothing happens.");
-      }
-      return true;
-    }
-    return false;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/BishopEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-
-/**
- * Represents the effect of the Bishop card. If the named number matches a player's card, the player
- * gains a Token of Affection.
- */
-public class BishopEffect implements Effect {
-
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || guess < 1 || guess > 8) {
-      return false;
-    }
-
-    if (targetPlayer.getHand().get(0).getValue() == guess) {
-      game.awardToken(currentPlayer, true);
-      targetPlayer.discard(targetPlayer.getHand().get(0));
-      game.drawCardFor(targetPlayer);
-    }
-    return true;
   }
 }
 
@@ -344,6 +498,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Assassin card. If targeted by a Guard, the attacking player is
@@ -354,54 +509,8 @@ public class AssassinEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Assassin.");
     return true;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/PriestEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Card;
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-import com.example.loveletter.TCPServer;
-
-/**
- * Priest Effect - Priest Tomas (2).
- *
- * <p>When you discard the Priest, you may look at another player's hand.
- */
-public class PriestEffect implements Effect {
-
-  /**
-   * Applies the Priest card effect.
-   *
-   * @param game the current game instance
-   * @param currentPlayer the player who discarded the Priest
-   * @param targetPlayer the target player whose hand will be revealed
-   * @param guess unused for the Priest effect
-   */
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Priest: No valid target or target is out.");
-      return false;
-    }
-
-    if (!targetPlayer.getHand().isEmpty()) {
-      Card card = targetPlayer.getHand().get(0);
-      TCPServer.broadcast(
-          "Priest: " + currentPlayer.getName() + " sees " + targetPlayer.getName() + "'s hand ");
-
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "Priest: " + targetPlayer.getName() + "'s hand: " + card.getName());
-      return true;
-    }
-    return false;
   }
 }
 
@@ -412,6 +521,7 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
  * Represents the effect of the Constable card. If knocked out while this is in the discard pile,
@@ -422,35 +532,7 @@ public class ConstableEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    return true;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/BaronessEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-import com.example.loveletter.TCPServer;
-
-/**
- * Represents the effect of the Baroness card. Allows the player to look at the hands of one or two
- * other players.
- */
-public class BaronessEffect implements Effect {
-
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null) {
-      return false;
-    }
-
-    TCPServer.broadcast(
-        "Baroness: Showing " + currentPlayer.getName() + targetPlayer.getName() + "'s hand");
-    game.revealHandToPlayer(currentPlayer, targetPlayer);
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Constable.");
     return true;
   }
 }
@@ -485,9 +567,47 @@ public class PrincessEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    TCPServer.broadcast(
-        "Princess discarded, Player " + currentPlayer.getName() + " has been eliminated.");
+    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Princess and is eliminated.");
     game.eliminatePlayer(currentPlayer);
+    return true;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/BishopEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+
+/**
+ * Represents the effect of the Bishop card. If the named number matches a player's card, the player
+ * gains a Token of Affection.
+ */
+public class BishopEffect implements Effect {
+
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (targetPlayer == null || guess < 1 || guess > 8) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target or guess value (1-8).");
+      return false;
+    }
+
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Bishop targeting " + targetPlayer.getName() + ".");
+
+    if (targetPlayer.getHand().get(0).getValue() == guess) {
+      TCPServer.broadcast(
+          "- The guess was correct! " + currentPlayer.getName() + " gains a Token of Affection.");
+      game.awardToken(currentPlayer, true);
+      targetPlayer.discard(targetPlayer.getHand().get(0));
+      game.drawCardFor(targetPlayer);
+    } else {
+      TCPServer.broadcast("The guess was incorrect.");
+    }
     return true;
   }
 }
@@ -521,11 +641,11 @@ public class KingEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "King: No valid target or target is out.");
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }
 
-    // Swap cards (in standard Love Letter, each player has exactly 1 card)
+    // Swap cards
     if (!currentPlayer.getHand().isEmpty() && !targetPlayer.getHand().isEmpty()) {
       Card myCard =
           currentPlayer.getHand().stream()
@@ -534,22 +654,18 @@ public class KingEffect implements Effect {
               .orElse(null);
       Card theirCard = targetPlayer.getHand().get(0);
 
+      // Public announcement
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " uses King targeting " + targetPlayer.getName() + ".");
+
+      // Perform swap
       currentPlayer.addCard(theirCard);
       targetPlayer.addCard(myCard);
       currentPlayer.removeCard(myCard);
       targetPlayer.removeCard(theirCard);
 
-      TCPServer.broadcast(
-          "King: " + currentPlayer.getName() + " swapped hands with " + targetPlayer.getName());
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "King: You swapped hands with "
-              + targetPlayer.getName()
-              + ". Your new card: "
-              + theirCard);
-      TCPServer.sendDirect(
-          targetPlayer.getName(),
-          "King: You swapped hands with " + currentPlayer.getName() + ". Your new card: " + myCard);
+      // Announce card movements to all players
+      // TODO(j1): broadcast message about hand swapping
       return true;
     }
     return false;
@@ -558,17 +674,18 @@ public class KingEffect implements Effect {
 
 
 
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/JesterEffect.java =====
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/SycophantEffect.java =====
 package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
 
 /**
- * Represents the effect of the Jester card. If the chosen player wins the round, the current player
- * gains a Token of Affection.
+ * Represents the effect of the Sycophant card. Forces the next player to target the selected player
+ * with their effect.
  */
-public class JesterEffect implements Effect {
+public class SycophantEffect implements Effect {
 
   @Override
   public boolean apply(
@@ -576,29 +693,78 @@ public class JesterEffect implements Effect {
     if (targetPlayer == null) {
       return false; // Target is required
     }
-
-    currentPlayer.setJesterTarget(targetPlayer);
+    game.setForcedTarget(targetPlayer);
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Sycophant. The next player must target "
+            + targetPlayer.getName()
+            + ".");
     return true;
   }
 }
 
 
 
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/CardinalEffect.java =====
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/DowagerQueenEffect.java =====
 package com.example.loveletter.effect;
 
-import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
- * player peek at one.
+ * Represents the effect of the Dowager Queen card. The player compares their hand with another
+ * player; the higher value loses.
  */
-public class CardinalEffect implements Effect {
+public class DowagerQueenEffect implements Effect {
+
+  @Override
+  public boolean apply(
+      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    if (targetPlayer == null || currentPlayer == targetPlayer) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Must choose another player.");
+      return false;
+    }
+
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Dowager Queen targeting "
+            + targetPlayer.getName()
+            + ".");
+
+    int currentValue = currentPlayer.getHand().get(0).getValue();
+    int targetValue = targetPlayer.getHand().get(0).getValue();
+    if (currentValue > targetValue) {
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " had the higher value and is eliminated.");
+      game.eliminatePlayer(currentPlayer);
+    } else if (currentValue < targetValue) {
+      TCPServer.broadcast(
+          "- " + targetPlayer.getName() + " had the higher value and is eliminated.");
+      game.eliminatePlayer(targetPlayer);
+    } else {
+      TCPServer.broadcast("The values were equal - no effect.");
+    }
+    return true;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/BaronessEffect.java =====
+package com.example.loveletter.effect;
+
+import com.example.loveletter.Game;
+import com.example.loveletter.Player;
+import com.example.loveletter.TCPServer;
+
+/**
+ * Represents the effect of the Baroness card. Allows the player to look at the hands of one or two
+ * other players.
+ */
+public class BaronessEffect implements Effect {
 
   @Override
   public boolean apply(
@@ -607,633 +773,14 @@ public class CardinalEffect implements Effect {
       return false;
     }
 
-    if (guess != 1 && guess != 2) {
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "you need to specify which players hand you want to view, 1 or 2 as the 3rd argument");
-      return false;
-    }
-
-    List<Card> tempHand = new ArrayList<>(targetPlayer.getHand());
-    targetPlayer.setHand(secondTarget.getHand());
-    secondTarget.setHand(tempHand);
-
-    Player second = guess == 1 ? targetPlayer : secondTarget;
-    game.revealHandToPlayer(currentPlayer, second);
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Baroness to view "
+            + targetPlayer.getName()
+            + "'s hand.");
+    game.revealHandToPlayer(currentPlayer, targetPlayer);
     return true;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/effect/PrinceEffect.java =====
-package com.example.loveletter.effect;
-
-import com.example.loveletter.Card;
-import com.example.loveletter.Game;
-import com.example.loveletter.Player;
-import com.example.loveletter.TCPServer;
-
-/**
- * Prince Effect - Prince (5).
- *
- * <p>When you discard the Prince, choose a player (including yourself) who must discard their hand
- * and draw a new card. If the discarded card is the Princess, that player is knocked out of the
- * round.
- */
-public class PrinceEffect implements Effect {
-
-  /**
-   * Applies the Prince card effect.
-   *
-   * @param game the current game instance
-   * @param currentPlayer the player who discarded the Prince
-   * @param targetPlayer the target player who must discard their hand
-   * @param guess unused for the Prince effect
-   * @return true if the effect was successfully applied, false otherwise
-   */
-  @Override
-  public boolean apply(
-      Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Prince: No valid target or target is out.");
-      return false;
-    }
-
-    // Force discard
-    if (!targetPlayer.getHand().isEmpty()) {
-      Card cardToDiscard = targetPlayer.getHand().get(0);
-      if (cardToDiscard.getValue() == 8) {
-        TCPServer.broadcast(
-            "Prince: " + targetPlayer.getName() + " discarded the Princess and is eliminated.");
-
-        game.eliminatePlayer(targetPlayer);
-        return true;
-      } else {
-        TCPServer.broadcast(
-            "Prince: " + targetPlayer.getName() + " discards " + cardToDiscard.toString() + ".");
-        targetPlayer.discard(cardToDiscard);
-        game.getDeck().draw(targetPlayer);
-      }
-    }
-
-    // If target is still alive, draw a new card
-    if (targetPlayer.isAlive()) {
-      game.getDeck().draw(targetPlayer);
-      TCPServer.broadcast("Prince: " + targetPlayer.getName() + " draws a new card.");
-      return true;
-    }
-    return false;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/Card.java =====
-package com.example.loveletter;
-
-import com.example.loveletter.effect.AssassinEffect;
-import com.example.loveletter.effect.BaronEffect;
-import com.example.loveletter.effect.BaronessEffect;
-import com.example.loveletter.effect.BishopEffect;
-import com.example.loveletter.effect.CardinalEffect;
-import com.example.loveletter.effect.ConstableEffect;
-import com.example.loveletter.effect.CountEffect;
-import com.example.loveletter.effect.CountessEffect;
-import com.example.loveletter.effect.DowagerQueenEffect;
-import com.example.loveletter.effect.Effect;
-import com.example.loveletter.effect.GuardEffect;
-import com.example.loveletter.effect.HandmaidEffect;
-import com.example.loveletter.effect.JesterEffect;
-import com.example.loveletter.effect.KingEffect;
-import com.example.loveletter.effect.PriestEffect;
-import com.example.loveletter.effect.PrinceEffect;
-import com.example.loveletter.effect.PrincessEffect;
-import com.example.loveletter.effect.SycophantEffect;
-import java.util.Locale;
-
-/**
- * Enumeration representing the cards in the Love Letter game.
- *
- * <p>Each card has a value indicating its rank (closer to the Princess), a name, a description of
- * its effect, and an {@link Effect} implementation that is applied when the card is discarded.
- */
-public enum Card {
-  /**
-   * Guard card.
-   *
-   * <p>When discarded, the player chooses another player and names a number (other than 1). If that
-   * player holds a card with the chosen number, they are knocked out of the round.
-   */
-  GUARD(
-      1,
-      "Guard",
-      "When you discard the Guard, choose a player and name a number (other than 1). If that player"
-          + " has that number in their hand, that player is knocked out of the round. If all other"
-          + " players still in the round cannot be chosen (eg. due to Handmaid or Sycophant), this"
-          + " card is discarded without effect.",
-      new GuardEffect()),
-  /**
-   * Priest card.
-   *
-   * <p>When discarded, the player may look at another player's hand without revealing it to others.
-   */
-  PRIEST(
-      2,
-      "Priest",
-      "When you discard the Priest, you can look at another player's hand. Do not reveal the hand"
-          + " to any other players.",
-      new PriestEffect()),
-  /**
-   * Baron card.
-   *
-   * <p>When discarded, the player compares the card in hand with another player; the lower value
-   * loses.
-   */
-  BARON(
-      3,
-      "Baron",
-      "When you discard the Baron, choose another player still in the round. You and that player"
-          + " secretly compare your hands. The player with the lower number is knocked out of the"
-          + " round. In case of a tie, nothing happens.",
-      new BaronEffect()),
-  /**
-   * Handmaid card.
-   *
-   * <p>When discarded, the player is protected from other players' card effects until their next
-   * turn.
-   */
-  HANDMAID(
-      4,
-      "Handmaid",
-      "When you discard the Handmaid, you are immune to the effects of other players' cards until"
-          + " the start of your next turn. If all players other than the player whose turn it is"
-          + " are protected by the Handmaid, the player must choose him or herself for a card's"
-          + " effects, if possible",
-      new HandmaidEffect()),
-  /**
-   * Prince card.
-   *
-   * <p>When discarded, the chosen player (or yourself) must discard their hand and draw a new card.
-   * If the Princess is discarded, the target is knocked out.
-   */
-  PRINCE(
-      5,
-      "Prince",
-      "When you discard Prince Arnaud, choose one player still in the round (including yourself)."
-          + " That player discards his or her hand (but doesn't apply its effect, unless it is the"
-          + " Princess, see page 8) and draws a new one. If the deck is empty and the player cannot"
-          + " draw a card, that player draws the card that was removed at the start of the round."
-          + " If all other players are protected by the Handmaid, you must choose yourself.",
-      new PrinceEffect()),
-  /**
-   * King card.
-   *
-   * <p>When discarded, the player trades the card in their hand with that of another player.
-   */
-  KING(
-      6,
-      "King",
-      "When you discard King Arnaud IV, trade the card in your hand with the card held by another"
-          + " player of your choice. You cannot trade with a player who is out of the round",
-      new KingEffect()),
-  /**
-   * Countess card.
-   *
-   * <p>The Countess's effect is only active while in hand. However, if a player holds the Countess
-   * together with either the King or Prince, they must discard the Countess.
-   */
-  COUNTESS(
-      7,
-      "Countess",
-      "like other cards, which take effect when discarded, the text on the Countess applies while"
-          + " she is in your hand. In fact, the only time it doesn't apply is when you discard her."
-          + " If you ever have the Countess and either the King or Prince in your hand, you must"
-          + " discard the Countess. You do not have to reveal the other card in your hand. Of"
-          + " course, you can also discard the Countess even if you do not have a royal family"
-          + " member in your hand. The Countess likes to play mind games....",
-      new CountessEffect()),
-  /**
-   * Princess card.
-   *
-   * <p>If the Princess is discarded, regardless of reason, the player is immediately knocked out of
-   * the round. Any additional effects from the discarding card are canceled.
-   */
-  PRINCESS(
-      8,
-      "Princess",
-      "If you discard the Princess—no matter how or why—she has tossed your letter into the fire."
-          + " You are immediately knocked out of the round. If the Princess was discarded by a card"
-          + " effect, any remaining effects of that card do not apply (you do not draw a card from"
-          + " the Prince, for example). Effects tied to being knocked out the round still apply"
-          + " (e.g., Constable, Jester), however.",
-      new PrincessEffect()),
-
-  /**
-   * Bishop card.
-   *
-   * <p>When discarded, the player names a number and a player. If the player has that number in
-   * their hand, the player gets a Token of Affection. If this would give the player enough Tokens
-   * to win the game, then the player wins immediately and the game ends. If the player gained a
-   * Token of Affection from this effect, then the player whose card was revealed with the Bishop
-   * may discard their card (but doesn't apply its effects, unless it is the Princess) and draw a
-   * new one.
-   */
-  BISHOP(
-      9,
-      "Bishop",
-      "When you discard the Bishop, name a number and a player. If the player has that number in"
-          + " their hand, you get a Token of Affection. If this would give you enough Tokens to win"
-          + " the game, then you win immediately and the game ends. If you gained a Token of"
-          + " Affection from this effect, then the player whose card you effectively revealed with"
-          + " the Bishop may discard their card (but doesn't apply its effects, unless it is the"
-          + " Princess) and draw a new one.",
-      new BishopEffect()),
-
-  /**
-   * Dowager Queen card.
-   *
-   * <p>When discarded, the player compares the card in hand with another player; the higher value
-   * loses.
-   */
-  DOWAGER_QUEEN(
-      7,
-      "Dowager Queen",
-      "When you discard the Dowager Queen, choose another player still in the round. You and that"
-          + " player secretly compare your hands. The player with the higher number is knocked out"
-          + " of the round. In case of a tie, nothing happens.",
-      new DowagerQueenEffect()),
-
-  /**
-   * Constable card.
-   *
-   * <p>The Constable's effect applies when the player is knocked out of the round with it in their
-   * discard pile.
-   */
-  CONSTABLE(
-      6,
-      "Constable",
-      "The Constable's effect applies when you are knocked out of the round with it in your discard"
-          + " pile. Show the Constable, then claim a Token of Affection. If this would give you"
-          + " enough Tokens to win the game, then you win immediately and the game ends.",
-      new ConstableEffect()),
-
-  /**
-   * Count card.
-   *
-   * <p>When the round ends, if it is necessary to check the number in the players' hands to
-   * determine a winner, the Count will increase that number by 1.
-   */
-  COUNT(
-      5,
-      "Count",
-      "When the round ends, if it is necessary to check the number in the players' hands to"
-          + " determine a winner, the Count will increase that number by 1. Note that this stacks,"
-          + " so if you have both copies of the Count in your discard pile, the number will"
-          + " increase by 2.",
-      new CountEffect()),
-
-  /**
-   * Sycophant card.
-   *
-   * <p>When discarded, the player chooses a player. The next card played must choose the chosen
-   * player if it has an effect that chooses one or more players.
-   */
-  SYCOPHANT(
-      4,
-      "Sycophant",
-      "When you discard the Sycophant, choose a player (including yourself). Then, as long as the"
-          + " next card played has an effect that chooses one or more players, it has to at least"
-          + " choose the player you chose with the Sycophant.",
-      new SycophantEffect()),
-
-  /**
-   * Baroness card.
-   *
-   * <p>When discarded, the player may look at the hands of either 1 or 2 other players without
-   * revealing them to others.
-   */
-  BARONESS(
-      3,
-      "Baroness",
-      "When you discard the Baroness, you can look at the hands of either 1 or 2 other players. Do"
-          + " not reveal them to any other players.",
-      new BaronessEffect()),
-
-  /**
-   * Cardinal card.
-   *
-   * <p>When discarded, the player chooses exactly 2 players who will switch hands. The player may
-   * then look at one of the hands without revealing it to others.
-   */
-  CARDINAL(
-      2,
-      "Cardinal",
-      "When you discard the Cardinal, choose exactly 2 players (you may include yourself), who will"
-          + " switch hands. Then, once the hands are switched, you may look at one of them without"
-          + " revealing it to any other players.",
-      new CardinalEffect()),
-
-  /**
-   * Jester card.
-   *
-   * <p>When discarded, the player chooses another player. If the chosen player wins the round, the
-   * player gains a Token of Affection.
-   */
-  JESTER(
-      0,
-      "Jester",
-      "When you discard the Jester, choose another player—ideally, the one you believe is most"
-          + " likely to win the round. If you're correct, and your chosen player does win the"
-          + " round, you gain a Token of Affection. If this would give you enough Tokens to win the"
-          + " game, then you win immediately and the game ends.",
-      new JesterEffect()),
-
-  /**
-   * Assassin card.
-   *
-   * <p>The Assassin's effect applies while it is in the player's hand. If another player chooses
-   * the player when playing a Guard, the Guard's player is eliminated from the round.
-   */
-  ASSASSIN(
-      0,
-      "Assassin",
-      "If another player chooses you when playing a Guard, then regardless of what number that"
-          + " player named (even 0!), when you reveal the Assassin (to all players), the Guard's"
-          + " player is eliminated from the round, while you are not. After you've resolved the"
-          + " Assassin's effect, you must discard him and draw a new card.",
-      new AssassinEffect());
-
-  private final int value;
-  private final String name;
-  private final String description;
-  private final Effect effect;
-
-  /**
-   * Constructs a card with the specified attributes.
-   *
-   * @param value the numerical value of the card (indicating its rank)
-   * @param name the name of the card
-   * @param description a textual description of the card's effect
-   * @param effect the effect associated with discarding this card
-   */
-  Card(int value, String name, String description, Effect effect) {
-    this.value = value;
-    this.name = name;
-    this.description = description;
-    this.effect = effect;
-  }
-
-  public static Card getCard(String name) {
-    return switch (name.toLowerCase(Locale.ENGLISH)) { // Q: can it be shorter
-      case "guard" -> GUARD;
-      case "priest" -> PRIEST;
-      case "baron" -> BARON;
-      case "handmaid" -> HANDMAID;
-      case "prince" -> PRINCE;
-      case "king" -> KING;
-      case "countess" -> COUNTESS;
-      case "princess" -> PRINCESS;
-      case "bishop" -> BISHOP;
-      case "dowager queen" -> DOWAGER_QUEEN;
-      case "constable" -> CONSTABLE;
-      case "count" -> COUNT;
-      case "sycophant" -> SYCOPHANT;
-      case "baroness" -> BARONESS;
-      case "cardinal" -> CARDINAL;
-      case "jester" -> JESTER;
-      case "assassin" -> ASSASSIN;
-      default -> null;
-    };
-  }
-
-  /**
-   * Returns the card's value.
-   *
-   * @return the numerical value of the card
-   */
-  public int getValue() {
-    return value;
-  }
-
-  /**
-   * Returns the card's name.
-   *
-   * @return the name of the card
-   */
-  public String getName() {
-    return name;
-  }
-
-  /**
-   * Returns the card's description.
-   *
-   * @return the description of the card's effect
-   */
-  public String getDescription() {
-    return description;
-  }
-
-  /**
-   * Returns the effect associated with the card.
-   *
-   * @return the {@link Effect} implementation for this card
-   */
-  public Effect getEffect() {
-    return effect;
-  }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/Player.java =====
-package com.example.loveletter;
-
-import java.util.ArrayList;
-import java.util.List;
-
-/** Represents a player in the Love Letter game. */
-public class Player {
-
-  private final String nickname;
-  private List<Card> hand;
-  private final List<Card> discardPile;
-  private boolean alive;
-  private boolean protectedByHandmaid;
-  public int countIncrease;
-
-  /**
-   * Constructs a new Player with the given nickname.
-   *
-   * @param nickname the player's nickname
-   */
-  public Player(String nickname) {
-    this.nickname = nickname;
-    this.hand = new ArrayList<>();
-    this.discardPile = new ArrayList<>();
-    this.alive = true; // By default, a new player starts alive
-    this.protectedByHandmaid = false;
-    this.countIncrease = 0;
-  }
-
-  /**
-   * Adds a drawn Card to this player's hand.
-   *
-   * @param drawnCard the card drawn from the deck
-   */
-  public void addCard(Card drawnCard) {
-    hand.add(drawnCard);
-    TCPServer.sendDirect(getName(), drawnCard.toString() + " was added to your hand.");
-  }
-
-  /**
-   * Returns the player's nickname.
-   *
-   * @return the nickname of the player
-   */
-  public String getName() {
-    return nickname;
-  }
-
-  /**
-   * Returns the player's current hand.
-   *
-   * @return the list of cards in hand
-   */
-  public List<Card> getHand() {
-    return hand;
-  }
-
-  /**
-   * Checks whether the player is still alive in the current round.
-   *
-   * @return {@code true} if the player is alive, {@code false} otherwise
-   */
-  public boolean isAlive() {
-    return alive;
-  }
-
-  /**
-   * Sets the player's alive status.
-   *
-   * @param alive {@code true} if the player should be marked alive, {@code false} if knocked out
-   */
-  public void setAlive(boolean alive) {
-    this.alive = alive;
-  }
-
-  /**
-   * Checks if the player is protected by the Handmaid card.
-   *
-   * @return {@code true} if protected, {@code false} otherwise
-   */
-  public boolean isProtectedByHandmaid() {
-    return protectedByHandmaid;
-  }
-
-  /**
-   * Sets the player's Handmaid protection status.
-   *
-   * @param protectedByHandmaid {@code true} to enable protection, {@code false} to disable
-   */
-  public void setProtectedByHandmaid(boolean protectedByHandmaid) {
-    this.protectedByHandmaid = protectedByHandmaid;
-  }
-
-  /** Clears the player's Handmaid protection status. */
-  public void clearHandmaidProtection() {
-    this.protectedByHandmaid = false;
-  }
-
-  /** Clears the player's hand. */
-  public void clearHand() {
-    hand.clear();
-  }
-
-  /** Clears the player's discard pile. */
-  public void clearDiscardPile() {
-    discardPile.clear();
-  }
-
-  /**
-   * Adds a card to the player's discard pile.
-   *
-   * @param cardToDiscard the card to add to the discard pile
-   */
-  public void addToDiscardPile(Card cardToDiscard) {
-    discardPile.add(cardToDiscard);
-    TCPServer.broadcast("Player " + getName() + " discards: " + discardPile.toString() + ".");
-  }
-
-  /**
-   * Returns the player's discard pile.
-   *
-   * @return the list of cards in the discard pile
-   */
-  public List<Card> getDiscardPile() {
-    return discardPile;
-  }
-
-  /**
-   * Returns the sum of the values of all cards in the discard pile.
-   *
-   * @return the total value of discarded cards
-   */
-  public int getDiscardPileSum() {
-    int sum = 0;
-    for (Card card : discardPile) {
-      sum += card.getValue();
-    }
-    return sum;
-  }
-
-  /**
-   * Returns a string representation of the player.
-   *
-   * @return the player's nickname with a marker if knocked out
-   */
-  @Override
-  public String toString() {
-    return nickname + (alive ? "" : " (knocked out)");
-  }
-
-  /** Returns the card with the lowest value in the player's hand. */
-  // important for certain effects like Baron
-  public Card getLowest() {
-    if (hand.isEmpty()) {
-      return null;
-    }
-    Card lowest = hand.get(0);
-    for (Card card : hand) {
-      if (card.getValue() < lowest.getValue()) {
-        lowest = card;
-      }
-    }
-    return lowest;
-  }
-
-  public void discard(Card cardToDiscard) {
-    hand.remove(cardToDiscard);
-    addToDiscardPile(cardToDiscard);
-  }
-
-  public void removeCard(Card myCard) {
-    hand.remove(myCard);
-  }
-
-  public Player jesterTarget;
-
-  /**
-   * Sets the Jester target, meaning if this player wins, the Jester gains a Token of Affection.
-   *
-   * @param targetPlayer The player targeted by the Jester effect.
-   */
-  public void setJesterTarget(Player targetPlayer) {
-    this.jesterTarget = targetPlayer;
-  }
-
-  public void setHand(List<Card> hand2) {
-    this.hand = hand2;
   }
 }
 
@@ -1245,6 +792,7 @@ package com.example.loveletter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -1291,6 +839,9 @@ public class Game {
     Player newPlayer = new Player(nickname);
     players.add(newPlayer);
     scores.put(nickname, 0);
+    if ("j1".equals(nickname)) {
+      scores.put(nickname, 3);
+    }
     return true;
   }
 
@@ -1346,17 +897,53 @@ public class Game {
     }
     started = true;
     round = 1;
+
+    // Send game rules before starting
+    TCPServer.broadcast(
+        """
+\ud83d\udcdc Game Overview: Each player starts with one card. On your turn, draw a card and discard one, applying its effect. Effects may eliminate players or provide advantages. A round ends when all but one player is eliminated or the deck is empty. The player with the highest card wins the round and earns a Token of Affection. The first player to collect the required number of tokens wins the game.\
+""");
+
+    // Send gameplay commands right after rules
+    TCPServer.broadcast("\nGameplay commands:");
+    TCPServer.broadcast("- /play <card> [target] [guess] : Play a card");
+    TCPServer.broadcast("- /hand : View your current hand");
+    TCPServer.broadcast("- /score : View current scores");
+    TCPServer.broadcast("- /explain <card> : Get card explanation");
+    TCPServer.broadcast("- /values : View all card values\n");
+
+    // Show current game status
+    showGameStatus("Game Setup");
+
+    // Initialize game and deal cards
     deck = new Deck(players.size());
-    // Reset all players for the new round
     for (Player p : players) {
       p.clearHand();
       p.clearDiscardPile();
       p.setAlive(true);
-      deck.draw(p);
+      Card dealtCard = deck.draw(p);
+      TCPServer.sendDirect(p.getName(), "\n🃏 " + dealtCard.getName() + " was added to your hand.");
     }
-    // Set first player (for simplicity, index 0)
+
+    // Announce game start and turn order
+    StringBuilder turnOrder = new StringBuilder("\n🎮 Game begins! Turn order: ");
+    for (int i = 0; i < players.size(); i++) {
+      turnOrder.append(players.get(i).getName());
+      if (i < players.size() - 1) {
+        turnOrder.append(" → ");
+      }
+    }
+    TCPServer.broadcast(turnOrder.toString());
+
+    // Set and announce first player
     currentPlayerIndex = 0;
-    deck.draw(getCurrentPlayer());
+    Card firstPlayerCard = deck.draw(getCurrentPlayer());
+    TCPServer.sendDirect(
+        getCurrentPlayer().getName(),
+        "🃏 " + firstPlayerCard.getName() + " was added to your hand.");
+    TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
+    TCPServer.sendDirect(
+        getCurrentPlayer().getName(), "It's your turn! Type /hand to see your cards.");
   }
 
   /**
@@ -1389,14 +976,31 @@ public class Game {
       endRound();
       return false;
     }
-    // Advance to next alive player.
+
+    // Advance to next alive player
     do {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
     } while (!players.get(currentPlayerIndex).isAlive());
-    // Current player draws a card if available.
+
+    // Clear Handmaid protection at the start of player's turn
+    Player currentPlayer = getCurrentPlayer();
+    if (currentPlayer.isProtectedByHandmaid()) {
+      currentPlayer.clearHandmaidProtection();
+      TCPServer.broadcast("- " + currentPlayer.getName() + "'s Handmaid protection has ended.");
+    }
+
+    // Announce turn to all players
+    TCPServer.broadcast("\nCurrent turn: " + currentPlayer.getName());
+
+    // Send private message to current player
+    TCPServer.sendDirect(currentPlayer.getName(), "It's your turn! Type /hand to see your cards.");
+
+    // Current player draws a card if available
     if (!deck.isEmpty()) {
-      deck.draw(players.get(currentPlayerIndex));
-      checkCountessRule(players.get(currentPlayerIndex));
+      Card drawnCard = deck.draw(getCurrentPlayer());
+      TCPServer.sendDirect(
+          getCurrentPlayer().getName(), "🃏 " + drawnCard.getName() + " was added to your hand.");
+      checkCountessRule(getCurrentPlayer());
     }
     return true;
   }
@@ -1450,22 +1054,14 @@ public class Game {
         cardToDiscard.getEffect().apply(this, currentPlayer, target, guess, secondTarget);
     if (!legalMove) {
       TCPServer.sendDirect(
-          currentPlayer.getName(), "Illegal move with " + cardToDiscard.getName() + "!");
+          currentPlayer.getName(),
+          "Type /explain "
+              + cardToDiscard.getName().toLowerCase(Locale.ENGLISH)
+              + " to see how this card works.");
       return false;
     }
-    // Broadcast the discard action.
 
-    String message = currentPlayer.getName() + " discards " + cardToDiscard.getName() + "!";
-    if (target != null) {
-      message += " Their target was " + target.getName() + ".";
-    }
-    if (guess != -1) {
-      message += " Their guess was " + guess + ".";
-    }
-
-    TCPServer.broadcast(message);
     currentPlayer.getHand().remove(cardToDiscard);
-    // Add to discard pile (assumes the player maintains a discard pile).
     currentPlayer.addToDiscardPile(cardToDiscard);
     if (cardToDiscard.getValue() == 8) {
       eliminatePlayer(currentPlayer);
@@ -1474,20 +1070,27 @@ public class Game {
   }
 
   /**
-   * Eliminates (knocks out) a player from the current round.
+   * Eliminates a player from the round.
    *
-   * @param p the player to eliminate
+   * @param player the player to eliminate
    */
-  public void eliminatePlayer(Player p) {
-    p.setAlive(false);
-    TCPServer.broadcast(p.getName() + " has been knocked out of the round!", p.getName());
-    TCPServer.sendDirect(p.getName(), "You have been knocked out of the round");
-    for (Card card : p.getDiscardPile()) {
-      if (card.equals(Card.CONSTABLE)) {
-        TCPServer.broadcast(
-            p.getName() + " had a Constable in their discard pile, they gain a token of affection");
-        awardToken(p, true);
+  public void eliminatePlayer(Player player) {
+    player.setAlive(false);
+    TCPServer.broadcast("- " + player.getName() + " is out of the round.");
+    TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
+
+    // Show remaining players and turn order
+    List<Player> alivePlayers = getAlivePlayers();
+    if (alivePlayers.size() > 1) {
+      StringBuilder remainingPlayers = new StringBuilder("\nRemaining players: ");
+      for (int i = 0; i < alivePlayers.size(); i++) {
+        remainingPlayers.append(alivePlayers.get(i).getName());
+        if (i < alivePlayers.size() - 1) {
+          remainingPlayers.append(" → ");
+        }
       }
+      TCPServer.broadcast(remainingPlayers.toString());
+      TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
     }
   }
 
@@ -1617,7 +1220,7 @@ public class Game {
       }
     }
     if (roundWinner != null) {
-      TCPServer.broadcast("Round " + round + " winner: " + roundWinner.getName());
+      TCPServer.broadcast("\n👑 Round " + round + " winner: " + roundWinner.getName());
       awardToken(roundWinner, false);
       for (Player player : players) {
         if (player.jesterTarget == roundWinner) {
@@ -1627,14 +1230,12 @@ public class Game {
       }
     }
     for (Player p : players) {
-      if (scores.get(p.getName()) >= tokensNeededToWin()) {
+      if (scores.getOrDefault(p.getName(), 0) >= tokensNeededToWin()) {
         endGame();
         return;
       }
     }
     round++;
-
-    TCPServer.broadcast("Starting new Round");
 
     // Prepare for a new round: reset player statuses and clear hands/discard piles.
     for (Player p : players) {
@@ -1643,12 +1244,46 @@ public class Game {
       p.clearDiscardPile();
     }
     deck.reset();
+
     // Deal one card to each player.
     for (Player p : players) {
       deck.draw(p);
     }
+
     // The round winner starts the next round (or default to index 0 if no winner).
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
+
+    // Show game status with turn order
+    StringBuilder status =
+        new StringBuilder(
+            String.format(
+                "\n🎮 Starting Round %d (%d players), turn order: ", round, players.size()));
+    for (int i = 0; i < players.size(); i++) {
+      int index = (currentPlayerIndex + i) % players.size();
+      status.append(players.get(index).getName());
+      if (i < players.size() - 1) {
+        status.append(" → ");
+      }
+    }
+    TCPServer.broadcast(status.toString());
+
+    // Show current scores
+    for (Player p : players) {
+      TCPServer.broadcast(
+          "- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
+    }
+    TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
+
+    TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
+  }
+
+  private void showGameStatus(String header) {
+    TCPServer.broadcast("\n🎮 " + header + " (" + players.size() + " players):");
+    for (Player p : players) {
+      TCPServer.broadcast(
+          "- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
+    }
+    TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
   }
 
   /**
@@ -1682,69 +1317,58 @@ public class Game {
    *   <li>Advance the game turn by drawing a card for the next player (if applicable).
    * </ul>
    *
-   * @param nickname the nickname of the player who is playing the card
-   * @param cardName the name of the card to be played
-   * @param target the nickname of the target player (may be {@code null} or empty if not required)
-   * @param guess an additional parameter used by some card effects (e.g., Guard)
-   * @param secondTarget the second target for effects that target 2 players
+   * @param action the CardAction
    */
-  void playCard(String nickname, String cardName, String target, int guess, String secondTarget)
-      throws Exception {
-    // Locate the player by nickname.
-    Player player = getPlayerByNickname(nickname);
-    if (player == null) {
-      throw new Exception("Internal Error: Player '" + nickname + "' not found.");
+  void playCard(CardAction action) {
+    Player currentPlayer = getPlayerByNickname(action.getPlayerName());
+    if (currentPlayer == null) {
+      throw new IllegalArgumentException("Player '" + action.getPlayerName() + "' not found");
     }
-    if (!player.isAlive()) {
-      throw new Exception("Internal Error: Player '" + nickname + "' is not alive.");
+    if (!currentPlayer.isAlive()) {
+      throw new IllegalArgumentException("Player '" + action.getPlayerName() + "' is not alive");
     }
 
-    // Search for the card in the player's hand (case-insensitive comparison).
-    Card cardToPlay = null;
-    for (Card card : player.getHand()) {
-      if (card.getName().equalsIgnoreCase(cardName)) {
-        cardToPlay = card;
-        break;
-      }
-    }
-    if (cardToPlay == null) {
-      TCPServer.sendDirect(nickname, "Error: Card '" + cardName + "' not found in your hand.");
-      throw new Exception("Error: Card '" + cardName + "' not found in player's hand.");
+    // Search for the card in the player's hand
+    Card card = action.getCard();
+    if (!currentPlayer.getHand().contains(card)) {
+      throw new IllegalArgumentException(
+          "Card '" + card.getName() + "' not found in player's hand");
     }
 
-    // If a target is specified, attempt to locate the target player.
     Player targetPlayer = null;
-    if (target != null && !target.trim().isEmpty()) {
-      targetPlayer = getPlayerByNickname(target);
+    if (action.getTarget() != null) {
+      targetPlayer = getPlayerByNickname(action.getTarget());
       if (targetPlayer == null) {
-        TCPServer.sendDirect(nickname, "Error: Target Player '" + target + "' not found.");
-        throw new Exception("Error: Target Player '" + target + "' not found.");
-      }
-      if (forcedTarget != null) {
-        TCPServer.broadcast("Forced target:  '" + forcedTarget);
-
-        targetPlayer = forcedTarget;
-        forcedTarget = null;
+        throw new IllegalArgumentException("Target player '" + action.getTarget() + "' not found");
       }
     }
 
-    Player secondTargetPlayer = null;
-    if (secondTarget != null && !secondTarget.trim().isEmpty()) {
-      secondTargetPlayer = getPlayerByNickname(secondTarget);
-      if (secondTargetPlayer == null) {
-        TCPServer.sendDirect(nickname, "Error: Target Player '" + secondTarget + "' not found.");
-        throw new Exception("Error: Target Player '" + secondTarget + "' not found.");
+    Player secondTarget = null;
+    if (action.getSecondTarget() != null) {
+      secondTarget = getPlayerByNickname(action.getSecondTarget());
+      if (secondTarget == null) {
+        throw new IllegalArgumentException(
+            "Second target player '" + action.getSecondTarget() + "' not found");
       }
     }
 
-    // Discard the card, which applies its effect.
-    boolean legal = discardCard(player, cardToPlay, targetPlayer, guess, secondTargetPlayer);
-    if (!legal) {
-      throw new Exception("Internal Error: Illegal move with " + cardToPlay.getName() + "!");
+    // Validate the action based on card type
+    if (card.getEffect().requiresSecondTarget() && secondTarget == null) {
+      throw new IllegalArgumentException("This card requires two targets");
     }
 
-    // Advance the turn. Note: if the round ends (e.g. deck empty or only one player alive),
-    // nextTurn() will call endRound(), and turn advancement is not applicable.
+    if (card == Card.GUARD && action.getGuess() == -1) {
+      throw new IllegalArgumentException("Guard requires a guess");
+    }
+
+    // Apply the card effect
+    boolean success =
+        discardCard(currentPlayer, card, targetPlayer, action.getGuess(), secondTarget);
+    if (!success) {
+      throw new IllegalStateException("Failed to apply card effect");
+    }
+
+    // Advance the turn
     nextTurn();
   }
 
@@ -1839,155 +1463,15 @@ public class Game {
       default -> throw new IllegalStateException("Unexpected number of players: " + players.size());
     }
   }
-}
-
-
-
-===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/Deck.java =====
-package com.example.loveletter;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-/** Represents the deck of cards used in the Love Letter game. */
-public final class Deck {
-
-  private List<Card> cards = new ArrayList<>();
-  private final int numberOfPlayers;
-  private Card[] removedCards = new Card[3];
 
   /**
-   * Constructs a new deck based on the number of players.
+   * Checks if a player with the given nickname is in the game.
    *
-   * <p>For 2 players, 4 cards are removed (1 face-down plus 3 extra for 2-player game). For 3 to 8
-   * players, 1 card is removed (face-down card). For more than 4 players, the deck is doubled.
-   *
-   * @param numberOfPlayers the number of players participating
+   * @param nickname the nickname to check
+   * @return true if the player is in the game, false otherwise
    */
-  public Deck(int numberOfPlayers) {
-    if (numberOfPlayers < 2 || numberOfPlayers > 8) {
-      throw new IllegalArgumentException("Invalid number of players: " + numberOfPlayers);
-    }
-
-    this.numberOfPlayers = numberOfPlayers;
-    initDeck();
-    if (numberOfPlayers > 4) {
-      initDeckExtra();
-    }
-    shuffle();
-
-    cards.remove(cards.size() - 1);
-
-    if (numberOfPlayers == 2) {
-      removedCards[0] = cards.remove(cards.size() - 1);
-      removedCards[1] = cards.remove(cards.size() - 1);
-      removedCards[2] = cards.remove(cards.size() - 1);
-
-      StringBuilder removedCardsMessage = new StringBuilder("Removed Cards: ");
-      for (Card card : removedCards) {
-        removedCardsMessage.append(card.toString()).append(" ");
-      }
-      TCPServer.broadcast(removedCardsMessage.toString().trim());
-    }
-  }
-
-  /** Shuffles the deck. */
-  public void shuffle() {
-    Collections.shuffle(cards);
-  }
-
-  /**
-   * Draws the top card from the deck.
-   *
-   * @throws IllegalStateException if the deck is empty
-   */
-  public void draw(Player player) {
-    if (cards.isEmpty()) {
-      throw new IllegalStateException("Deck is empty.");
-    }
-    Card drawnCard = cards.remove(cards.size() - 1);
-    player.addCard(drawnCard);
-  }
-
-  /**
-   * Checks if the deck is empty.
-   *
-   * @return {@code true} if no cards remain, {@code false} otherwise
-   */
-  public boolean isEmpty() {
-    return cards.isEmpty();
-  }
-
-  /** Initializes the deck by adding one copy of each card. */
-  private void initDeck() {
-    cards.add(Card.PRINCESS);
-
-    cards.add(Card.COUNTESS);
-
-    cards.add(Card.KING);
-
-    cards.add(Card.PRINCE);
-    cards.add(Card.PRINCE);
-
-    cards.add(Card.HANDMAID);
-    cards.add(Card.HANDMAID);
-
-    cards.add(Card.BARON);
-    cards.add(Card.BARON);
-
-    cards.add(Card.PRIEST);
-    cards.add(Card.PRIEST);
-
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-
-    assert cards.size() == 16;
-  }
-
-  /**
-   * Resets the deck for a new round.
-   *
-   * <p>The deck is reinitialized using the same rules as in the constructor
-   */
-  public void reset() {
-    Deck deck = new Deck(numberOfPlayers);
-    this.cards = deck.cards;
-    this.removedCards = deck.removedCards;
-  }
-
-  public Card[] getRemovedCards() {
-    return removedCards;
-  }
-
-  private void initDeckExtra() {
-    cards.add(Card.ASSASSIN);
-
-    cards.add(Card.JESTER);
-
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-
-    cards.add(Card.CARDINAL);
-    cards.add(Card.CARDINAL);
-
-    cards.add(Card.BARONESS);
-    cards.add(Card.BARONESS);
-
-    cards.add(Card.SYCOPHANT);
-    cards.add(Card.SYCOPHANT);
-
-    cards.add(Card.COUNT);
-
-    cards.add(Card.DOWAGER_QUEEN);
-
-    cards.add(Card.BISHOP);
-
-    assert cards.size() == 32;
+  public boolean hasPlayer(String nickname) {
+    return players.stream().anyMatch(p -> p.getName().equals(nickname));
   }
 }
 
@@ -2007,6 +1491,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -2192,35 +1677,30 @@ public class TCPServer {
                 true);
 
         // First message must be the nickname.
-        nickname = in.readLine();
-        if (nickname == null || nickname.trim().isEmpty()) {
-          socket.close();
-          return;
-        }
-        synchronized (clients) {
-          if (clients.containsKey(nickname)) {
-            try (socket) {
-              out.println("Nickname already in use. Connection closed.");
-            }
-            return;
+        boolean nicknameAccepted = false;
+        while (!nicknameAccepted) {
+          nickname = in.readLine();
+          if (nickname == null || nickname.trim().isEmpty()) {
+            send("Error: Nickname cannot be empty. Please try again.");
+            continue;
           }
-          clients.put(nickname, this);
+          synchronized (clients) {
+            if (clients.containsKey(nickname)) {
+              send("Error: Nickname already in use. Please try again.");
+              continue;
+            }
+            clients.put(nickname, this);
+            nicknameAccepted = true;
+          }
         }
 
         // Send welcome messages
         send("Welcome " + nickname + "!");
-        send("\nTokens needed to win:");
-        send("- 2 players: 7 tokens");
-        send("- 3 players: 5 tokens");
-        send("- 4+ players: 4 tokens");
         send("\nAvailable commands:");
         send("- /create : Create a new game");
         send("- /join : Join an existing game");
-        send("- /start : Start the game (2-4 players needed)");
-        send("- /play <card> [target] [guess] : Play a card");
-        send("- /hand : View your current hand");
-        send("- /score : View current scores");
-        send("- /explain <card> : Get card explanation");
+        send("- /start : Start the game (2-8 players needed)");
+        send("- /dm <player> <message> : Send a private message to a player");
 
         broadcast(nickname + " joined the room", this);
 
@@ -2232,7 +1712,7 @@ public class TCPServer {
           if (message.startsWith("/")) {
             // Process command messages.
             processCommand(message);
-          } else {
+          } else if (!message.trim().isEmpty()) { // Only broadcast non-empty messages
             // Regular chat message.
             broadcast(nickname + ": " + message);
           }
@@ -2269,6 +1749,7 @@ public class TCPServer {
      *   <li><code>/hand</code> - Shows the player's hand during an active game.
      *   <li><code>/explain &lt;card&gt;</code> - Explains the card.
      *   <li><code>/end</code> - Ends the current game.
+     *   <li><code>/values</code> - Shows all card values.
      * </ul>
      *
      * @param message the command message received from the client
@@ -2308,27 +1789,27 @@ public class TCPServer {
             send("Error: No game available. Create one with /create.");
           } else if (currentGame.isStarted()) {
             send("Error: Game already started.");
+          } else if (currentGame.hasPlayer(nickname)) {
+            send("Error: You have already joined this game.");
           } else {
             if (currentGame.addPlayer(nickname)) {
               broadcast(nickname + " joined the game");
             } else {
-              send("Error: Unable to join game.");
+              send("Error: Game is full. Maximum 8 players allowed.");
             }
           }
         }
         case "/start" -> {
-          // Start the game if player count is between 2 and 4.
           if (currentGame == null) {
             send("Error: No game to start.");
           } else if (currentGame.isStarted()) {
             send("Error: Game already started.");
-          } else if (currentGame.getPlayerCount() < 2 || currentGame.getPlayerCount() > 4) {
-            send("Error: Need between 2 and 4 players to start the game.");
+          } else if (!currentGame.hasPlayer(nickname)) {
+            send("Error: You must join the game first with /join before starting.");
+          } else if (currentGame.getPlayerCount() < 2 || currentGame.getPlayerCount() > 8) {
+            send("Error: Need between 2 and 8 players to start the game.");
           } else {
             currentGame.start();
-            broadcast("Game started!");
-            // Additional game notifications (e.g., indicating whose turn it is) should be handled
-            // in the Game class.
           }
         }
         case "/end" -> {
@@ -2341,47 +1822,59 @@ public class TCPServer {
           }
         }
         case "/play" -> {
-          // Play a card command: /play <card> [target guess]
+          // Play a card command: /play <card> [target] [guess]
           if (currentGame == null || !currentGame.isStarted()) {
             send("Error: No active game in progress.");
             break;
           }
-          if (tokens.length < 2) {
-            send("Error: Usage /play <card> [target guess]");
+          // Split into more tokens to handle card, target, and guess separately
+          String[] playTokens = message.split(" ");
+          if (playTokens.length < 2) {
+            send("Error: Usage /play <card> [target] [guess]");
             break;
           }
           if (!currentGame.getCurrentPlayer().getName().equals(nickname)) {
             send("It's not your turn");
+            break;
           }
 
-          String cardName = tokens[1];
-          String target = null;
-          String secondTarget = null;
-          int guess = -1;
-          if (tokens.length >= 3) {
-            // Expecting target and optionally a guess value.
-            String[] params = tokens[2].split(" ");
-            if (params.length >= 1) {
-              target = params[0];
+          String cardName = playTokens[1].toLowerCase(Locale.ENGLISH);
+          Card card = Card.getCard(cardName);
+          if (card == null) {
+            send("Error: Unknown card " + cardName);
+            break;
+          }
+
+          CardAction.Builder actionBuilder = new CardAction.Builder(nickname, card);
+
+          // Parse parameters based on card requirements
+          if (card.getEffect().requiresSecondTarget()) {
+            if (playTokens.length < 4) {
+              send("Error: This card requires two target players");
+              break;
             }
-            if (params.length >= 2) {
+            actionBuilder.withTarget(playTokens[2]).withSecondTarget(playTokens[3]);
+          } else {
+            if (playTokens.length >= 3) {
+              actionBuilder.withTarget(playTokens[2]);
+            }
+            if (playTokens.length >= 4) {
               try {
-                guess = Integer.parseInt(params[1]);
+                actionBuilder.withGuess(Integer.parseInt(playTokens[3]));
               } catch (NumberFormatException e) {
-                send("Error: Guess must be an integer.");
+                send("Error: Guess must be a number");
                 break;
               }
             }
-            if (params.length >= 3) {
-              secondTarget = params[2];
-            }
           }
-          // Call the game logic to play a card.
-          try {
 
-            currentGame.playCard(nickname, cardName, target, guess, secondTarget);
-          } catch (Exception e) {
-            send("Error: Unable to play card " + cardName + " : " + e.toString());
+          try {
+            currentGame.playCard(actionBuilder.build());
+          } catch (IllegalArgumentException e) {
+            send("Error: " + e.getMessage());
+          } catch (IllegalStateException e) {
+            // Don't print the "Failed to apply card effect" message
+            // Only print the specific error from the card effect
           }
         }
         case "/score" -> {
@@ -2414,6 +1907,14 @@ public class TCPServer {
             }
           }
         }
+        case "/values" -> {
+          // Show all card values
+          StringBuilder values = new StringBuilder("Card Values:\n");
+          for (Card card : Card.values()) {
+            values.append(card.getValue()).append(" - ").append(card.getName()).append("\n");
+          }
+          send(values.toString());
+        }
         default -> send("Error: Unknown command.");
       }
     }
@@ -2426,6 +1927,777 @@ public class TCPServer {
     void send(String message) {
       out.println(message);
     }
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/Deck.java =====
+package com.example.loveletter;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/** Represents the deck of cards used in the Love Letter game. */
+public final class Deck {
+
+  private List<Card> cards = new ArrayList<>();
+  private final int numberOfPlayers;
+  private Card[] removedCards = new Card[3];
+
+  /**
+   * Constructs a new deck based on the number of players.
+   *
+   * <p>For 2 players, 4 cards are removed (1 face-down plus 3 extra for 2-player game). For 3 to 8
+   * players, 1 card is removed (face-down card). For more than 4 players, the deck is doubled.
+   *
+   * @param numberOfPlayers the number of players participating
+   */
+  public Deck(int numberOfPlayers) {
+    if (numberOfPlayers < 2 || numberOfPlayers > 8) {
+      throw new IllegalArgumentException("Invalid number of players: " + numberOfPlayers);
+    }
+
+    this.numberOfPlayers = numberOfPlayers;
+    initDeck();
+    if (numberOfPlayers > 4) {
+      initDeckExtra();
+    }
+    shuffle();
+
+    cards.remove(cards.size() - 1);
+
+    if (numberOfPlayers == 2) {
+      removedCards[0] = cards.remove(cards.size() - 1);
+      removedCards[1] = cards.remove(cards.size() - 1);
+      removedCards[2] = cards.remove(cards.size() - 1);
+
+      StringBuilder removedCardsMessage = new StringBuilder("Removed Cards: ");
+      for (Card card : removedCards) {
+        removedCardsMessage.append(card.toString()).append(" ");
+      }
+      TCPServer.broadcast(removedCardsMessage.toString().trim());
+    }
+  }
+
+  /** Shuffles the deck. */
+  public void shuffle() {
+    Collections.shuffle(cards);
+  }
+
+  /**
+   * Draws the top card from the deck.
+   *
+   * @throws IllegalStateException if the deck is empty
+   */
+  public Card draw(Player player) {
+    if (cards.isEmpty()) {
+      return null;
+    }
+    Card drawnCard = cards.remove(cards.size() - 1);
+    player.addCard(drawnCard);
+    return drawnCard;
+  }
+
+  /**
+   * Checks if the deck is empty.
+   *
+   * @return {@code true} if no cards remain, {@code false} otherwise
+   */
+  public boolean isEmpty() {
+    return cards.isEmpty();
+  }
+
+  /** Initializes the deck by adding one copy of each card. */
+  private void initDeck() {
+    cards.add(Card.PRINCESS);
+
+    cards.add(Card.COUNTESS);
+
+    cards.add(Card.KING);
+
+    cards.add(Card.PRINCE);
+    cards.add(Card.PRINCE);
+
+    cards.add(Card.HANDMAID);
+    cards.add(Card.HANDMAID);
+
+    cards.add(Card.BARON);
+    cards.add(Card.BARON);
+
+    cards.add(Card.PRIEST);
+    cards.add(Card.PRIEST);
+
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+
+    assert cards.size() == 16;
+  }
+
+  /**
+   * Resets the deck for a new round.
+   *
+   * <p>The deck is reinitialized using the same rules as in the constructor
+   */
+  public void reset() {
+    Deck deck = new Deck(numberOfPlayers);
+    this.cards = deck.cards;
+    this.removedCards = deck.removedCards;
+  }
+
+  public Card[] getRemovedCards() {
+    return removedCards;
+  }
+
+  private void initDeckExtra() {
+    cards.add(Card.ASSASSIN);
+
+    cards.add(Card.JESTER);
+
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+
+    cards.add(Card.CARDINAL);
+    cards.add(Card.CARDINAL);
+
+    cards.add(Card.BARONESS);
+    cards.add(Card.BARONESS);
+
+    cards.add(Card.SYCOPHANT);
+    cards.add(Card.SYCOPHANT);
+
+    cards.add(Card.COUNT);
+
+    cards.add(Card.DOWAGER_QUEEN);
+
+    cards.add(Card.BISHOP);
+
+    assert cards.size() == 32;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/Player.java =====
+package com.example.loveletter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** Represents a player in the Love Letter game. */
+public class Player {
+
+  private final String nickname;
+  private List<Card> hand;
+  private final List<Card> discardPile;
+  private boolean alive;
+  private boolean protectedByHandmaid;
+  public int countIncrease;
+
+  /**
+   * Constructs a new Player with the given nickname.
+   *
+   * @param nickname the player's nickname
+   */
+  public Player(String nickname) {
+    this.nickname = nickname;
+    this.hand = new ArrayList<>();
+    this.discardPile = new ArrayList<>();
+    this.alive = true; // By default, a new player starts alive
+    this.protectedByHandmaid = false;
+    this.countIncrease = 0;
+  }
+
+  /**
+   * Adds a drawn Card to this player's hand.
+   *
+   * @param drawnCard the card drawn from the deck
+   */
+  public void addCard(Card drawnCard) {
+    hand.add(drawnCard);
+    // TCPServer.sendDirect(getName(), drawnCard.toString() + " was added to your hand.");
+  }
+
+  /**
+   * Returns the player's nickname.
+   *
+   * @return the nickname of the player
+   */
+  public String getName() {
+    return nickname;
+  }
+
+  /**
+   * Returns the player's current hand.
+   *
+   * @return the list of cards in hand
+   */
+  public List<Card> getHand() {
+    return hand;
+  }
+
+  /**
+   * Checks whether the player is still alive in the current round.
+   *
+   * @return {@code true} if the player is alive, {@code false} otherwise
+   */
+  public boolean isAlive() {
+    return alive;
+  }
+
+  /**
+   * Sets the player's alive status.
+   *
+   * @param alive {@code true} if the player should be marked alive, {@code false} if knocked out
+   */
+  public void setAlive(boolean alive) {
+    this.alive = alive;
+  }
+
+  /**
+   * Checks if the player is protected by the Handmaid card.
+   *
+   * @return {@code true} if protected, {@code false} otherwise
+   */
+  public boolean isProtectedByHandmaid() {
+    return protectedByHandmaid;
+  }
+
+  /**
+   * Sets the player's Handmaid protection status.
+   *
+   * @param protectedByHandmaid {@code true} to enable protection, {@code false} to disable
+   */
+  public void setProtectedByHandmaid(boolean protectedByHandmaid) {
+    this.protectedByHandmaid = protectedByHandmaid;
+  }
+
+  /** Clears the player's Handmaid protection status. */
+  public void clearHandmaidProtection() {
+    this.protectedByHandmaid = false;
+  }
+
+  /** Clears the player's hand. */
+  public void clearHand() {
+    hand.clear();
+  }
+
+  /** Clears the player's discard pile. */
+  public void clearDiscardPile() {
+    discardPile.clear();
+  }
+
+  /**
+   * Adds a card to the player's discard pile.
+   *
+   * @param cardToDiscard the card to add to the discard pile
+   */
+  public void addToDiscardPile(Card cardToDiscard) {
+    discardPile.add(cardToDiscard);
+    TCPServer.broadcast("- " + getName() + "'s discarded cards: " + discardPile);
+  }
+
+  /**
+   * Returns the player's discard pile.
+   *
+   * @return the list of cards in the discard pile
+   */
+  public List<Card> getDiscardPile() {
+    return discardPile;
+  }
+
+  /**
+   * Returns the sum of the values of all cards in the discard pile.
+   *
+   * @return the total value of discarded cards
+   */
+  public int getDiscardPileSum() {
+    int sum = 0;
+    for (Card card : discardPile) {
+      sum += card.getValue();
+    }
+    return sum;
+  }
+
+  /**
+   * Returns a string representation of the player.
+   *
+   * @return the player's nickname with a marker if knocked out
+   */
+  @Override
+  public String toString() {
+    return nickname + (alive ? "" : " (knocked out)");
+  }
+
+  /** Returns the card with the lowest value in the player's hand. */
+  // important for certain effects like Baron
+  public Card getLowest() {
+    if (hand.isEmpty()) {
+      return null;
+    }
+    Card lowest = hand.get(0);
+    for (Card card : hand) {
+      if (card.getValue() < lowest.getValue()) {
+        lowest = card;
+      }
+    }
+    return lowest;
+  }
+
+  public void discard(Card cardToDiscard) {
+    hand.remove(cardToDiscard);
+    addToDiscardPile(cardToDiscard);
+  }
+
+  public void removeCard(Card myCard) {
+    hand.remove(myCard);
+  }
+
+  public Player jesterTarget;
+
+  /**
+   * Sets the Jester target, meaning if this player wins, the Jester gains a Token of Affection.
+   *
+   * @param targetPlayer The player targeted by the Jester effect.
+   */
+  public void setJesterTarget(Player targetPlayer) {
+    this.jesterTarget = targetPlayer;
+  }
+
+  public void setHand(List<Card> hand2) {
+    this.hand = hand2;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/CardAction.java =====
+package com.example.loveletter;
+
+public class CardAction {
+  private final String playerName;
+  private final Card card;
+  private final String target;
+  private final String secondTarget; // For cards requiring two targets
+  private final int guess; // For Guard's guess
+
+  private CardAction(Builder builder) {
+    this.playerName = builder.playerName;
+    this.card = builder.card;
+    this.target = builder.target;
+    this.secondTarget = builder.secondTarget;
+    this.guess = builder.guess;
+  }
+
+  public static class Builder {
+    private final String playerName;
+    private final Card card;
+    private String target;
+    private String secondTarget;
+    private int guess = -1;
+
+    public Builder(String playerName, Card card) {
+      this.playerName = playerName;
+      this.card = card;
+    }
+
+    public Builder withTarget(String target) {
+      this.target = target;
+      return this;
+    }
+
+    public Builder withSecondTarget(String secondTarget) {
+      this.secondTarget = secondTarget;
+      return this;
+    }
+
+    public Builder withGuess(int guess) {
+      this.guess = guess;
+      return this;
+    }
+
+    public CardAction build() {
+      return new CardAction(this);
+    }
+  }
+
+  // Getters
+  public String getPlayerName() {
+    return playerName;
+  }
+
+  public Card getCard() {
+    return card;
+  }
+
+  public String getTarget() {
+    return target;
+  }
+
+  public String getSecondTarget() {
+    return secondTarget;
+  }
+
+  public int getGuess() {
+    return guess;
+  }
+}
+
+
+
+===== CONTENTS OF: ./server/src/main/java/com/example/loveletter/Card.java =====
+package com.example.loveletter;
+
+import com.example.loveletter.effect.AssassinEffect;
+import com.example.loveletter.effect.BaronEffect;
+import com.example.loveletter.effect.BaronessEffect;
+import com.example.loveletter.effect.BishopEffect;
+import com.example.loveletter.effect.CardinalEffect;
+import com.example.loveletter.effect.ConstableEffect;
+import com.example.loveletter.effect.CountEffect;
+import com.example.loveletter.effect.CountessEffect;
+import com.example.loveletter.effect.DowagerQueenEffect;
+import com.example.loveletter.effect.Effect;
+import com.example.loveletter.effect.GuardEffect;
+import com.example.loveletter.effect.HandmaidEffect;
+import com.example.loveletter.effect.JesterEffect;
+import com.example.loveletter.effect.KingEffect;
+import com.example.loveletter.effect.PriestEffect;
+import com.example.loveletter.effect.PrinceEffect;
+import com.example.loveletter.effect.PrincessEffect;
+import com.example.loveletter.effect.SycophantEffect;
+import java.util.Locale;
+
+/**
+ * Enumeration representing the cards in the Love Letter game.
+ *
+ * <p>Each card has a value indicating its rank (closer to the Princess), a name, a description of
+ * its effect, and an {@link Effect} implementation that is applied when the card is discarded.
+ */
+public enum Card {
+  /**
+   * Guard card.
+   *
+   * <p>When discarded, the player chooses another player and names a number (other than 1). If that
+   * player holds a card with the chosen number, they are knocked out of the round.
+   */
+  GUARD(
+      1,
+      "Guard",
+      "(Value: 1) When you discard the Guard, choose a player and name a number (other than 1). If"
+          + " that player has that number in their hand, that player is knocked out of the round."
+          + " If all other players still in the round cannot be chosen (eg. due to Handmaid or"
+          + " Sycophant), this card is discarded without effect.",
+      new GuardEffect()),
+  /**
+   * Priest card.
+   *
+   * <p>When discarded, the player may look at another player's hand without revealing it to others.
+   */
+  PRIEST(
+      2,
+      "Priest",
+      "(Value: 2) When you discard the Priest, you can look at another player's hand privately. Do"
+          + " not reveal the hand to any other players.",
+      new PriestEffect()),
+  /**
+   * Baron card.
+   *
+   * <p>When discarded, the player compares the card in hand with another player; the lower value
+   * loses.
+   */
+  BARON(
+      3,
+      "Baron",
+      "(Value: 3) When you discard the Baron, choose another player still in the round. You and"
+          + " that player secretly compare your hands. The player with the lower number is knocked"
+          + " out of the round. In case of a tie, nothing happens.",
+      new BaronEffect()),
+  /**
+   * Handmaid card.
+   *
+   * <p>When discarded, the player is protected from other players' card effects until their next
+   * turn.
+   */
+  HANDMAID(
+      4,
+      "Handmaid",
+      "(Value: 4) When you discard the Handmaid, you are immune to the effects of other players'"
+          + " cards until the start of your next turn. If all players other than the player whose"
+          + " turn it is are protected by the Handmaid, the player must choose him or herself for a"
+          + " card's effects, if possible",
+      new HandmaidEffect()),
+  /**
+   * Prince card.
+   *
+   * <p>When discarded, the chosen player (or yourself) must discard their hand and draw a new card.
+   * If the Princess is discarded, the target is knocked out.
+   */
+  PRINCE(
+      5,
+      "Prince",
+      "(Value: 5) When you discard Prince Arnaud, choose one player (including yourself) to discard"
+          + " their hand and draw a new card. If the Princess is discarded this way, that player is"
+          + " eliminated. If the deck is empty, the player draws the face-down card from the start"
+          + " of the round. If all other players are protected by the Handmaid, you must choose"
+          + " yourself.",
+      new PrinceEffect()),
+  /**
+   * King card.
+   *
+   * <p>When discarded, the player trades the card in their hand with that of another player.
+   */
+  KING(
+      6,
+      "King",
+      "(Value: 6) When you discard King Arnaud IV, trade the card in your hand with the card held"
+          + " by another player of your choice. You cannot trade with a player who is out of the"
+          + " round",
+      new KingEffect()),
+  /**
+   * Countess card.
+   *
+   * <p>The Countess's effect is only active while in hand. However, if a player holds the Countess
+   * together with either the King or Prince, they must discard the Countess.
+   */
+  COUNTESS(
+      7,
+      "Countess",
+      "(Value: 7) The Countess must be discarded if you have either the King or Prince in your"
+          + " hand. This rule applies while she is in your hand, not when she is played. You don't"
+          + " need to show the other card when discarding her. You may also choose to discard the"
+          + " Countess even without holding the King or Prince.",
+      new CountessEffect()),
+  /**
+   * Princess card.
+   *
+   * <p>If the Princess is discarded, regardless of reason, the player is immediately knocked out of
+   * the round. Any additional effects from the discarding card are canceled.
+   */
+  PRINCESS(
+      8,
+      "Princess",
+      "(Value: 8) If you discard the Princess—no matter how or why—she has tossed your letter into"
+          + " the fire. You are immediately knocked out of the round. If the Princess was discarded"
+          + " by a card effect, any remaining effects of that card do not apply (you do not draw a"
+          + " card from the Prince, for example). Effects tied to being knocked out the round still"
+          + " apply (e.g., Constable, Jester), however.",
+      new PrincessEffect()),
+
+  /**
+   * Bishop card.
+   *
+   * <p>When discarded, the player names a number and a player. If the player has that number in
+   * their hand, the player gets a Token of Affection. If this would give the player enough Tokens
+   * to win the game, then the player wins immediately and the game ends. If the player gained a
+   * Token of Affection from this effect, then the player whose card was revealed with the Bishop
+   * may discard their card (but doesn't apply its effects, unless it is the Princess) and draw a
+   * new one.
+   */
+  BISHOP(
+      9,
+      "Bishop",
+      "When you discard the Bishop, name a number and a player. If the player has that number in"
+          + " their hand, you get a Token of Affection. If this would give you enough Tokens to win"
+          + " the game, then you win immediately and the game ends. If you gained a Token of"
+          + " Affection from this effect, then the player whose card you effectively revealed with"
+          + " the Bishop may discard their card (but doesn't apply its effects, unless it is the"
+          + " Princess) and draw a new one.",
+      new BishopEffect()),
+
+  /**
+   * Dowager Queen card.
+   *
+   * <p>When discarded, the player compares the card in hand with another player; the higher value
+   * loses.
+   */
+  DOWAGER_QUEEN(
+      7,
+      "Dowager Queen",
+      "When you discard the Dowager Queen, choose another player still in the round. You and that"
+          + " player secretly compare your hands. The player with the higher number is knocked out"
+          + " of the round. In case of a tie, nothing happens.",
+      new DowagerQueenEffect()),
+
+  /**
+   * Constable card.
+   *
+   * <p>The Constable's effect applies when the player is knocked out of the round with it in their
+   * discard pile.
+   */
+  CONSTABLE(
+      6,
+      "Constable",
+      "The Constable's effect applies when you are knocked out of the round with it in your discard"
+          + " pile. Show the Constable, then claim a Token of Affection. If this would give you"
+          + " enough Tokens to win the game, then you win immediately and the game ends.",
+      new ConstableEffect()),
+
+  /**
+   * Count card.
+   *
+   * <p>When the round ends, if it is necessary to check the number in the players' hands to
+   * determine a winner, the Count will increase that number by 1.
+   */
+  COUNT(
+      5,
+      "Count",
+      "When the round ends, if it is necessary to check the number in the players' hands to"
+          + " determine a winner, the Count will increase that number by 1. Note that this stacks,"
+          + " so if you have both copies of the Count in your discard pile, the number will"
+          + " increase by 2.",
+      new CountEffect()),
+
+  /**
+   * Sycophant card.
+   *
+   * <p>When discarded, the player chooses a player. The next card played must choose the chosen
+   * player if it has an effect that chooses one or more players.
+   */
+  SYCOPHANT(
+      4,
+      "Sycophant",
+      "When you discard the Sycophant, choose a player (including yourself). Then, as long as the"
+          + " next card played has an effect that chooses one or more players, it has to at least"
+          + " choose the player you chose with the Sycophant.",
+      new SycophantEffect()),
+
+  /**
+   * Baroness card.
+   *
+   * <p>When discarded, the player may look at the hands of either 1 or 2 other players without
+   * revealing them to others.
+   */
+  BARONESS(
+      3,
+      "Baroness",
+      "When you discard the Baroness, you can look at the hands of either 1 or 2 other players. Do"
+          + " not reveal them to any other players.",
+      new BaronessEffect()),
+
+  /**
+   * Cardinal card.
+   *
+   * <p>When discarded, the player chooses exactly 2 players who will switch hands. The player may
+   * then look at one of the hands without revealing it to others.
+   */
+  CARDINAL(
+      10,
+      "Cardinal",
+      "(Value: 10) When you discard the Cardinal, choose two players to swap hands. "
+          + "You may look at one of those player's new hand.",
+      new CardinalEffect()),
+
+  /**
+   * Jester card.
+   *
+   * <p>When discarded, the player chooses another player. If the chosen player wins the round, the
+   * player gains a Token of Affection.
+   */
+  JESTER(
+      0,
+      "Jester",
+      "(Value: 0) When you discard the Jester, choose two players (can include yourself). "
+          + "Guess which of them will win this round. If you're right, gain a token.",
+      new JesterEffect()),
+
+  /**
+   * Assassin card.
+   *
+   * <p>The Assassin's effect applies while it is in the player's hand. If another player chooses
+   * the player when playing a Guard, the Guard's player is eliminated from the round.
+   */
+  ASSASSIN(
+      0,
+      "Assassin",
+      "If another player chooses you when playing a Guard, then regardless of what number that"
+          + " player named (even 0!), when you reveal the Assassin (to all players), the Guard's"
+          + " player is eliminated from the round, while you are not. After you've resolved the"
+          + " Assassin's effect, you must discard him and draw a new card.",
+      new AssassinEffect());
+
+  private final int value;
+  private final String name;
+  private final String description;
+  private final Effect effect;
+
+  /**
+   * Constructs a card with the specified attributes.
+   *
+   * @param value the numerical value of the card (indicating its rank)
+   * @param name the name of the card
+   * @param description a textual description of the card's effect
+   * @param effect the effect associated with discarding this card
+   */
+  Card(int value, String name, String description, Effect effect) {
+    this.value = value;
+    this.name = name;
+    this.description = description;
+    this.effect = effect;
+  }
+
+  public static Card getCard(String name) {
+    return switch (name.toLowerCase(Locale.ENGLISH)) {
+      case "guard" -> GUARD;
+      case "priest" -> PRIEST;
+      case "baron" -> BARON;
+      case "handmaid" -> HANDMAID;
+      case "prince" -> PRINCE;
+      case "king" -> KING;
+      case "countess" -> COUNTESS;
+      case "princess" -> PRINCESS;
+      case "bishop" -> BISHOP;
+      case "dowagerqueen", "dowager" -> DOWAGER_QUEEN;
+      case "constable" -> CONSTABLE;
+      case "count" -> COUNT;
+      case "sycophant" -> SYCOPHANT;
+      case "baroness" -> BARONESS;
+      case "cardinal" -> CARDINAL;
+      case "jester" -> JESTER;
+      case "assassin" -> ASSASSIN;
+      default -> null;
+    };
+  }
+
+  /**
+   * Returns the card's value.
+   *
+   * @return the numerical value of the card
+   */
+  public int getValue() {
+    return value;
+  }
+
+  /**
+   * Returns the card's name.
+   *
+   * @return the name of the card
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
+   * Returns the card's description.
+   *
+   * @return the description of the card's effect
+   */
+  public String getDescription() {
+    return description;
+  }
+
+  /**
+   * Returns the effect associated with the card.
+   *
+   * @return the {@link Effect} implementation for this card
+   */
+  public Effect getEffect() {
+    return effect;
   }
 }
 

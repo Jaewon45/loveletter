@@ -31,7 +31,8 @@ public class BaronEffect implements Effect {
     }
 
     if (targetPlayer == currentPlayer) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Cannot target yourself with Baron.");
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: Cannot target yourself with Baron.");
       return false;
     }
 
@@ -41,12 +42,24 @@ public class BaronEffect implements Effect {
       Card theirCard = targetPlayer.getLowest();
 
       // Public announcement
-      TCPServer.broadcast("- " + currentPlayer.getName() + " uses Baron targeting " + targetPlayer.getName() + ".");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " uses Baron targeting " + targetPlayer.getName() + ".");
 
       // Private reveals
-      String compareResult = "- Card Comparison: " + currentPlayer.getName() + " (" + myCard.getName() + 
-          " - " + myCard.getValue() + ") vs " + targetPlayer.getName() + " (" + theirCard.getName() + 
-          " - " + theirCard.getValue() + ")";
+      String compareResult =
+          "- Card Comparison: "
+              + currentPlayer.getName()
+              + " ("
+              + myCard.getName()
+              + " - "
+              + myCard.getValue()
+              + ") vs "
+              + targetPlayer.getName()
+              + " ("
+              + theirCard.getName()
+              + " - "
+              + theirCard.getValue()
+              + ")";
       TCPServer.sendDirect(currentPlayer.getName(), compareResult);
       TCPServer.sendDirect(targetPlayer.getName(), compareResult);
 

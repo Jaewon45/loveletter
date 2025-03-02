@@ -56,18 +56,13 @@ public final class Deck {
    *
    * @throws IllegalStateException if the deck is empty
    */
-  public Card draw(Player player, boolean silent) {
+  public Card draw(Player player) {
     if (cards.isEmpty()) {
       return null;
     }
     Card drawnCard = cards.remove(cards.size() - 1);
     player.addCard(drawnCard);
     return drawnCard;
-  }
-
-  // Overload for backward compatibility
-  public Card draw(Player player) {
-    return draw(player, false);
   }
 
   /**

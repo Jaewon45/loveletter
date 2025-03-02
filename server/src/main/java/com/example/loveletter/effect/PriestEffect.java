@@ -29,11 +29,20 @@ public class PriestEffect implements Effect {
 
     if (!targetPlayer.getHand().isEmpty()) {
       // Public announcement
-      TCPServer.broadcast("- " + currentPlayer.getName() + " uses Priest targeting " + targetPlayer.getName() + ".");
-      
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " uses Priest targeting "
+              + targetPlayer.getName()
+              + ".");
+
       // Private reveal
-      TCPServer.sendDirect(currentPlayer.getName(), 
-          "- Card Revealed: " + targetPlayer.getName() + " holds " + targetPlayer.getHand().toString());
+      TCPServer.sendDirect(
+          currentPlayer.getName(),
+          "- Card Revealed: "
+              + targetPlayer.getName()
+              + " holds "
+              + targetPlayer.getHand().toString());
       return true;
     }
     return false;

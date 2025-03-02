@@ -13,7 +13,8 @@ public class CountEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Count to increase their hand value.");
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Count to increase their hand value.");
     currentPlayer.countIncrease++;
     return true;
   }

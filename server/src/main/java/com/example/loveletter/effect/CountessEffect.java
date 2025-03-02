@@ -7,10 +7,10 @@ import com.example.loveletter.TCPServer;
 /**
  * Countess Effect - Countess Wilhelmina (7).
  *
- * <p>The Countess must be discarded if you have either the King or Prince in your hand. This rule 
- * applies while she is in your hand, not when she is played. You don't need to show the other card 
- * when discarding her. You may also choose to discard the Countess even without holding the King 
- * or Prince.
+ * <p>The Countess must be discarded if you have either the King or Prince in your hand. This rule
+ * applies while she is in your hand, not when she is played. You don't need to show the other card
+ * when discarding her. You may also choose to discard the Countess even without holding the King or
+ * Prince.
  */
 public class CountessEffect implements Effect {
 

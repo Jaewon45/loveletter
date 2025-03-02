@@ -17,7 +17,12 @@ public class SycophantEffect implements Effect {
       return false; // Target is required
     }
     game.setForcedTarget(targetPlayer);
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Sycophant. The next player must target " + targetPlayer.getName() + ".");
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Sycophant. The next player must target "
+            + targetPlayer.getName()
+            + ".");
     return true;
   }
 }

@@ -17,7 +17,12 @@ public class BaronessEffect implements Effect {
       return false;
     }
 
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Baroness to view " + targetPlayer.getName() + "'s hand.");
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Baroness to view "
+            + targetPlayer.getName()
+            + "'s hand.");
     game.revealHandToPlayer(currentPlayer, targetPlayer);
     return true;
   }

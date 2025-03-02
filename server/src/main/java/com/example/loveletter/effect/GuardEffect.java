@@ -37,22 +37,24 @@ public class GuardEffect implements Effect {
     // Check if the target's card matches the guess
     if (!targetPlayer.getHand().isEmpty()) {
       Card theirCard = targetPlayer.getHand().get(0);
-      
+
       // Initial announcement
-      TCPServer.broadcast("- " + currentPlayer.getName() + " uses Guard targeting " + targetPlayer.getName() + ".");
-      
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " uses Guard targeting " + targetPlayer.getName() + ".");
+
       if (theirCard.equals(Card.ASSASSIN)) {
         TCPServer.broadcast("- The target reveals Assassin!");
         game.eliminatePlayer(currentPlayer);
         targetPlayer.discard(theirCard);
         game.drawCardFor(targetPlayer);
       } else if (theirCard.getValue() == guess) {
-        TCPServer.broadcast("- The guess was " + guess + " (" + theirCard.getName() + "), which was correct!");
+        TCPServer.broadcast(
+            "- The guess was " + guess + " (" + theirCard.getName() + "), which was correct!");
         game.eliminatePlayer(targetPlayer);
       } else {
         TCPServer.broadcast("- The guess was " + guess + ", which was incorrect.");
       }
-      
+
       return true;
     }
     return false;

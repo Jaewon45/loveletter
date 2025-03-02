@@ -18,7 +18,8 @@ public class JesterEffect implements Effect {
       return false;
     }
 
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
     currentPlayer.setJesterTarget(targetPlayer);
     return true;
   }

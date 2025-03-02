@@ -6,8 +6,12 @@ A Java implementation of the Love Letter card game with network multiplayer supp
 
 ## Prerequisites
 
-- Java 17 or higher
-- Maven for building and running the project
+- Java
+- Gradle for building and running the project
+
+## Configuration
+
+change in config.properties
 
 ## Building and Running
 
@@ -15,17 +19,47 @@ A Java implementation of the Love Letter card game with network multiplayer supp
 
 2. Run the server:
 ```bash
-mvn exec:java -Dexec.mainClass="com.example.loveletter.TCPServer"
+./gradlew server:run
 ```
 
 3. Run the client (in a separate terminal):
 ```bash
-mvn exec:java -Dexec.mainClass="com.example.loveletter.TCPClient"
+./gradlew client:run
 ```
 
 ## Running Tests
 
-Run the test suite:
-```bash
-mvn test
-```
+
+## Architecture
+
+Server Architecture:
+
+├── CardAction.java
+├── Card.java
+├── Deck.java
+├── effect
+│   ├── AssassinEffect.java
+│   ├── BaronEffect.java
+│   ├── BaronessEffect.java
+│   ├── BishopEffect.java
+│   ├── CardinalEffect.java
+│   ├── ConstableEffect.java
+│   ├── CountEffect.java
+│   ├── CountessEffect.java
+│   ├── DowagerQueenEffect.java
+│   ├── Effect.java
+│   ├── GuardEffect.java
+│   ├── HandmaidEffect.java
+│   ├── JesterEffect.java
+│   ├── KingEffect.java
+│   ├── PriestEffect.java
+│   ├── PrinceEffect.java
+│   ├── PrincessEffect.java
+│   └── SycophantEffect.java
+├── Game.java
+├── Player.java
+└── TCPServer.java
+
+the server logic is only slightly decoupled from the game logic
+
+

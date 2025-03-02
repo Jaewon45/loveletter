@@ -24,7 +24,8 @@ public class HandmaidEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     currentPlayer.setProtectedByHandmaid(true);
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Handmaid and is protected until their next turn.");
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Handmaid and is protected until their next turn.");
     return true;
   }
 }

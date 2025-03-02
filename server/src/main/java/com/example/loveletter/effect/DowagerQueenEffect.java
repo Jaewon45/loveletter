@@ -18,15 +18,22 @@ public class DowagerQueenEffect implements Effect {
       return false;
     }
 
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Dowager Queen targeting " + targetPlayer.getName() + ".");
-    
+    TCPServer.broadcast(
+        "- "
+            + currentPlayer.getName()
+            + " uses Dowager Queen targeting "
+            + targetPlayer.getName()
+            + ".");
+
     int currentValue = currentPlayer.getHand().get(0).getValue();
     int targetValue = targetPlayer.getHand().get(0).getValue();
     if (currentValue > targetValue) {
-      TCPServer.broadcast("- " + currentPlayer.getName() + " had the higher value and is eliminated.");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " had the higher value and is eliminated.");
       game.eliminatePlayer(currentPlayer);
     } else if (currentValue < targetValue) {
-      TCPServer.broadcast("- " + targetPlayer.getName() + " had the higher value and is eliminated.");
+      TCPServer.broadcast(
+          "- " + targetPlayer.getName() + " had the higher value and is eliminated.");
       game.eliminatePlayer(targetPlayer);
     } else {
       TCPServer.broadcast("The values were equal - no effect.");
