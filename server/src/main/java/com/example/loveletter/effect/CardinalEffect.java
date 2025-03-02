@@ -6,7 +6,6 @@ import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
@@ -18,10 +17,7 @@ public class CardinalEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     // Cardinal needs two targets that aren't protected
-    List<Player> validTargets =
-        game.getAlivePlayers().stream()
-            .filter(p -> !p.isProtectedByHandmaid())
-            .collect(Collectors.toList());
+    List<Player> validTargets = validTargets(game, currentPlayer);
 
     if (validTargets.size() < 2) {
       TCPServer.broadcast(

@@ -1,9 +1,9 @@
 package com.example.loveletter.effect;
 
+import java.util.List;
+
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Represents the special power of a card.
@@ -34,12 +34,12 @@ public interface Effect {
    * Handmaid, the effect cannot target anyone.
    */
   default boolean hasValidTargets(Game game, Player currentPlayer) {
-    // Get all alive players except current player
-    List<Player> potentialTargets =
-        game.getAlivePlayers().stream()
-            .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
-            .collect(Collectors.toList());
+    return !validTargets(game, currentPlayer).isEmpty();
+  }
 
-    return !potentialTargets.isEmpty();
+  default List<Player> validTargets(Game game, Player currentPlayer) {
+    return game.getAlivePlayers().stream()
+        .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
+        .toList();
   }
 }

@@ -250,7 +250,6 @@ import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
@@ -262,10 +261,7 @@ public class CardinalEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     // Cardinal needs two targets that aren't protected
-    List<Player> validTargets =
-        game.getAlivePlayers().stream()
-            .filter(p -> !p.isProtectedByHandmaid())
-            .collect(Collectors.toList());
+    List<Player> validTargets = validTargets(game, currentPlayer);
 
     if (validTargets.size() < 2) {
       TCPServer.broadcast(
@@ -442,13 +438,19 @@ public interface Effect {
    * Handmaid, the effect cannot target anyone.
    */
   default boolean hasValidTargets(Game game, Player currentPlayer) {
-    // Get all alive players except current player
+    return !validTargets(game, currentPlayer).isEmpty();
+  }
+
+  default List<Player> validTargets(Game game, Player currentPlayer) {
+    // Get a list of players who are alive, not the current player, and not protected by Handmaid
     List<Player> potentialTargets =
         game.getAlivePlayers().stream()
-            .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
-            .collect(Collectors.toList());
+            .filter(player -> player != currentPlayer) // Exclude the current player
+            .filter(
+                player -> !player.isProtectedByHandmaid()) // Exclude players protected by Handmaid
+            .collect(Collectors.toList()); // Collect the results into a list
 
-    return !potentialTargets.isEmpty();
+    return potentialTargets;
   }
 }
 
@@ -1274,7 +1276,7 @@ public class Game {
   }
 
   /** Returns a list of players still alive in the current round. */
-  private List<Player> getAlivePlayers() {
+  public List<Player> getAlivePlayers() {
     List<Player> alive = new ArrayList<>();
     for (Player p : players) {
       if (p.isAlive()) {

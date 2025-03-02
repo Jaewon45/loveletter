@@ -382,7 +382,7 @@ public class Game {
   }
 
   /** Returns a list of players still alive in the current round. */
-  private List<Player> getAlivePlayers() {
+  public List<Player> getAlivePlayers() {
     List<Player> alive = new ArrayList<>();
     for (Player p : players) {
       if (p.isAlive()) {
