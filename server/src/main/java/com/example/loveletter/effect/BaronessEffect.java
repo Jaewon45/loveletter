@@ -14,18 +14,20 @@ public class BaronessEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: At least one player must be selected.");
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: At least one player must be selected.");
       return false;
     }
 
-    TCPServer.broadcast("- " + currentPlayer.getName() + " uses Baroness to view other players' hands.");
-    
+    TCPServer.broadcast(
+        "- " + currentPlayer.getName() + " uses Baroness to view other players' hands.");
+
     game.revealHandToPlayer(currentPlayer, targetPlayer);
-    
+
     if (secondTarget != null) {
-        game.revealHandToPlayer(currentPlayer, secondTarget);
+      game.revealHandToPlayer(currentPlayer, secondTarget);
     }
-    
+
     return true;
   }
 }

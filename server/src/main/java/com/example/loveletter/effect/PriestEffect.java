@@ -23,7 +23,8 @@ public class PriestEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (!hasValidTargets(game, currentPlayer)) {
-      TCPServer.broadcast("- " + currentPlayer.getName() + " discards Priest with no effect (no valid targets).");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Priest with no effect (no valid targets).");
       return true;
     }
 

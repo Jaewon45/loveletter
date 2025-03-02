@@ -14,11 +14,17 @@ public class DowagerQueenEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (!hasValidTargets(game, currentPlayer)) {
-      TCPServer.broadcast("- " + currentPlayer.getName() + " discards DowagerQueen with no effect (no valid targets).");
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " discards DowagerQueen with no effect (no valid targets).");
       return true;
     }
 
-    if (targetPlayer == null || currentPlayer == targetPlayer || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
+    if (targetPlayer == null
+        || currentPlayer == targetPlayer
+        || !targetPlayer.isAlive()
+        || targetPlayer.isProtectedByHandmaid()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Must choose another player.");
       return false;
     }
@@ -34,13 +40,13 @@ public class DowagerQueenEffect implements Effect {
     int targetValue = targetPlayer.getHand().get(0).getValue();
 
     // Send private comparison message only to the player who used DowagerQueen
-    String compareResult = String.format(
-        "Card Comparison: Your %s (%d) vs opponent's %s (%d)",
-        currentPlayer.getHand().get(0).getName(),
-        currentValue,
-        targetPlayer.getHand().get(0).getName(),
-        targetValue
-    );
+    String compareResult =
+        String.format(
+            "Card Comparison: Your %s (%d) vs opponent's %s (%d)",
+            currentPlayer.getHand().get(0).getName(),
+            currentValue,
+            targetPlayer.getHand().get(0).getName(),
+            targetValue);
     TCPServer.sendDirect(currentPlayer.getName(), compareResult);
 
     if (currentValue > targetValue) {

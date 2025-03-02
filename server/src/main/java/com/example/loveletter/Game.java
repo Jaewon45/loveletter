@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Represents the Love Letter game.
@@ -294,7 +293,8 @@ public class Game {
     player.setAlive(false);
     TCPServer.broadcast("- " + player.getName() + " is out of the round.");
     TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
-    TCPServer.broadcast("- " + player.getName() + "'s discarded cards: " + player.getDiscardPile().toString());
+    TCPServer.broadcast(
+        "- " + player.getName() + "'s discarded cards: " + player.getDiscardPile().toString());
 
     // Show remaining players and turn order
     List<Player> alivePlayers = getAlivePlayers();
@@ -381,13 +381,15 @@ public class Game {
     }
   }
 
-  /**
-   * Returns a list of players still alive in the current round.
-   */
-  public List<Player> getAlivePlayers() {
-    return players.stream()
-        .filter(Player::isAlive)
-        .collect(Collectors.toList());
+  /** Returns a list of players still alive in the current round. */
+  private List<Player> getAlivePlayers() {
+    List<Player> alive = new ArrayList<>();
+    for (Player p : players) {
+      if (p.isAlive()) {
+        alive.add(p);
+      }
+    }
+    return alive;
   }
 
   /**
@@ -451,14 +453,17 @@ public class Game {
     for (Player winner : roundWinners) {
       TCPServer.broadcast("\n👑 Round " + round + " winner: " + winner.getName());
       awardToken(winner, false);
-      
+
       // Handle Jester targets
       for (Player player : players) {
         if (player.jesterTarget == winner) {
           TCPServer.broadcast(
-              "🃏 " + player.getName() + " gains a Token of Affection for correctly choosing "
-              + winner.getName() + " with Jester!");
-          awardToken(player, true);  // true means check for game end
+              "🃏 "
+                  + player.getName()
+                  + " gains a Token of Affection for correctly choosing "
+                  + winner.getName()
+                  + " with Jester!");
+          awardToken(player, true); // true means check for game end
         }
       }
     }
@@ -535,44 +540,50 @@ public class Game {
 
   private void startNextRound(Player roundWinner) {
     round++;
-    
+
     // Prepare for a new round: reset player statuses and clear hands/discard piles
     for (Player p : players) {
-        p.setAlive(true);
-        p.clearHand();
-        p.clearDiscardPile();
+      p.setAlive(true);
+      p.clearHand();
+      p.clearDiscardPile();
     }
     deck = new Deck(players.size());
 
     // Deal one card to each player
     for (Player p : players) {
-        Card dealtCard = deck.draw(p);
-        TCPServer.sendDirect(p.getName(), "\n🃏 " + dealtCard.getName() + " was added to your hand.");
+      Card dealtCard = deck.draw(p);
+      TCPServer.sendDirect(p.getName(), "\n🃏 " + dealtCard.getName() + " was added to your hand.");
     }
 
     // Set the round winner as first player (or default to index 0 if no winner)
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
 
     // Show round status with turn order starting from winner
-    StringBuilder status = new StringBuilder(String.format("\n🎮 Starting Round %d (%d players), turn order: ", round, players.size()));
+    StringBuilder status =
+        new StringBuilder(
+            String.format(
+                "\n🎮 Starting Round %d (%d players), turn order: ", round, players.size()));
     for (int i = 0; i < players.size(); i++) {
-        int index = (currentPlayerIndex + i) % players.size();
-        status.append(players.get(index).getName());
-        if (i < players.size() - 1) {
-            status.append(" → ");
-        }
+      int index = (currentPlayerIndex + i) % players.size();
+      status.append(players.get(index).getName());
+      if (i < players.size() - 1) {
+        status.append(" → ");
+      }
     }
     TCPServer.broadcast(status.toString());
 
     // Show current scores
     for (Player p : players) {
-        TCPServer.broadcast("- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
+      TCPServer.broadcast(
+          "- " + p.getName() + ": " + scores.getOrDefault(p.getName(), 0) + " tokens");
     }
     TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
 
     // Draw first card for the starting player
     Card firstPlayerCard = deck.draw(getCurrentPlayer());
-    TCPServer.sendDirect(getCurrentPlayer().getName(), "🃏 " + firstPlayerCard.getName() + " was added to your hand.");
+    TCPServer.sendDirect(
+        getCurrentPlayer().getName(),
+        "🃏 " + firstPlayerCard.getName() + " was added to your hand.");
     TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
   }
 

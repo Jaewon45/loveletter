@@ -1,12 +1,11 @@
 package com.example.loveletter.effect;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Prince Effect - Prince Arnaud (5).
@@ -32,13 +31,16 @@ public class PrinceEffect implements Effect {
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     // Prince can target self, so only check other players if not targeting self
     if (targetPlayer != currentPlayer && !hasValidTargets(game, currentPlayer)) {
-        TCPServer.broadcast("- " + currentPlayer.getName() + " must target themselves with Prince (no other valid targets).");
-        targetPlayer = currentPlayer;
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " must target themselves with Prince (no other valid targets).");
+      targetPlayer = currentPlayer;
     }
 
     if (targetPlayer == null) {
-        TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
-        return false;
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
+      return false;
     }
 
     // Force discard of current hand

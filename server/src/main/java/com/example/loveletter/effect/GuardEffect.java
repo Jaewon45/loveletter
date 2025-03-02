@@ -32,8 +32,9 @@ public class GuardEffect implements Effect {
 
     // Check if there are any valid targets
     if (!hasValidTargets(game, currentPlayer)) {
-      TCPServer.broadcast("- " + currentPlayer.getName() + " discards Guard with no effect (no valid targets).");
-      return true;  // Card is still discarded
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Guard with no effect (no valid targets).");
+      return true; // Card is still discarded
     }
 
     if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {

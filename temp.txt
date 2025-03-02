@@ -30,6 +30,15 @@ public class PrinceEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
+    // Prince can target self, so only check other players if not targeting self
+    if (targetPlayer != currentPlayer && !hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " must target themselves with Prince (no other valid targets).");
+      targetPlayer = currentPlayer;
+    }
+
     if (targetPlayer == null) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
       return false;
@@ -80,19 +89,26 @@ public class JesterEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be selected.");
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Jester with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
+      return false;
+    }
+
+    if (targetPlayer == currentPlayer) {
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: Cannot target yourself with Jester.");
       return false;
     }
 
     TCPServer.broadcast(
         "- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
     currentPlayer.setJesterTarget(targetPlayer);
-    return true;
-  }
-
-  @Override
-  public boolean requiresSecondTarget() {
     return true;
   }
 }
@@ -162,7 +178,13 @@ public class BaronEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Baron with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }
@@ -228,6 +250,7 @@ import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
@@ -238,16 +261,29 @@ public class CardinalEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || secondTarget == null) {
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "Invalid target: Cardinal requires exactly two players to swap hands.");
-      return false;
+    // Cardinal needs two targets that aren't protected
+    List<Player> validTargets =
+        game.getAlivePlayers().stream()
+            .filter(p -> !p.isProtectedByHandmaid())
+            .collect(Collectors.toList());
+
+    if (validTargets.size() < 2) {
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " discards Cardinal with no effect (not enough valid targets).");
+      return true;
     }
 
-    if (!targetPlayer.isAlive() || !secondTarget.isAlive()) {
+    if (targetPlayer == null
+        || secondTarget == null
+        || !targetPlayer.isAlive()
+        || !secondTarget.isAlive()
+        || targetPlayer.isProtectedByHandmaid()
+        || secondTarget.isProtectedByHandmaid()) {
       TCPServer.sendDirect(
-          currentPlayer.getName(), "Invalid target: Both players must be in the round.");
+          currentPlayer.getName(),
+          "Invalid targets: Both players must be in the round and not protected.");
       return false;
     }
 
@@ -266,8 +302,12 @@ public class CardinalEffect implements Effect {
             + secondTarget.getName()
             + " swap hands.");
 
+    Player viewplayer = targetPlayer;
+    if (viewplayer == currentPlayer) {
+      viewplayer = secondTarget;
+    }
     // Let current player peek at one of the hands (first target's hand)
-    game.revealHandToPlayer(currentPlayer, targetPlayer);
+    game.revealHandToPlayer(currentPlayer, viewplayer);
 
     return true;
   }
@@ -330,7 +370,13 @@ public class PriestEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Priest with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }
@@ -364,6 +410,8 @@ package com.example.loveletter.effect;
 
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Represents the special power of a card.
@@ -387,6 +435,20 @@ public interface Effect {
   // New method to indicate if effect needs a second target
   default boolean requiresSecondTarget() {
     return false;
+  }
+
+  /**
+   * Checks if there are any valid targets for the effect. If all other players are protected by
+   * Handmaid, the effect cannot target anyone.
+   */
+  default boolean hasValidTargets(Game game, Player currentPlayer) {
+    // Get all alive players except current player
+    List<Player> potentialTargets =
+        game.getAlivePlayers().stream()
+            .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
+            .collect(Collectors.toList());
+
+    return !potentialTargets.isEmpty();
   }
 }
 
@@ -455,12 +517,20 @@ public class GuardEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     // Must name a value other than 1, guess in [2..8]
-    if (targetPlayer == null || guess < 2 || guess > 8) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid guess or no target.");
+    if (guess < 2 || guess > 8) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid guess value (2-8).");
       return false;
     }
-    if (!targetPlayer.isAlive()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Guard: target is already knocked out.");
+
+    // Check if there are any valid targets
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Guard with no effect (no valid targets).");
+      return true; // Card is still discarded
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid target.");
       return false;
     }
 
@@ -640,7 +710,13 @@ public class KingEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || !targetPlayer.isAlive()) {
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards King with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Player must be in the round.");
       return false;
     }
@@ -665,7 +741,8 @@ public class KingEffect implements Effect {
       targetPlayer.removeCard(theirCard);
 
       // Announce card movements to all players
-      // TODO(j1): broadcast message about hand swapping
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " and " + targetPlayer.getName() + " swap their hands.");
       return true;
     }
     return false;
@@ -722,7 +799,18 @@ public class DowagerQueenEffect implements Effect {
   @Override
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
-    if (targetPlayer == null || currentPlayer == targetPlayer) {
+    if (!hasValidTargets(game, currentPlayer)) {
+      TCPServer.broadcast(
+          "- "
+              + currentPlayer.getName()
+              + " discards DowagerQueen with no effect (no valid targets).");
+      return true;
+    }
+
+    if (targetPlayer == null
+        || currentPlayer == targetPlayer
+        || !targetPlayer.isAlive()
+        || targetPlayer.isProtectedByHandmaid()) {
       TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Must choose another player.");
       return false;
     }
@@ -736,6 +824,17 @@ public class DowagerQueenEffect implements Effect {
 
     int currentValue = currentPlayer.getHand().get(0).getValue();
     int targetValue = targetPlayer.getHand().get(0).getValue();
+
+    // Send private comparison message only to the player who used DowagerQueen
+    String compareResult =
+        String.format(
+            "Card Comparison: Your %s (%d) vs opponent's %s (%d)",
+            currentPlayer.getHand().get(0).getName(),
+            currentValue,
+            targetPlayer.getHand().get(0).getName(),
+            targetValue);
+    TCPServer.sendDirect(currentPlayer.getName(), compareResult);
+
     if (currentValue > targetValue) {
       TCPServer.broadcast(
           "- " + currentPlayer.getName() + " had the higher value and is eliminated.");
@@ -770,16 +869,20 @@ public class BaronessEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null) {
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: At least one player must be selected.");
       return false;
     }
 
     TCPServer.broadcast(
-        "- "
-            + currentPlayer.getName()
-            + " uses Baroness to view "
-            + targetPlayer.getName()
-            + "'s hand.");
+        "- " + currentPlayer.getName() + " uses Baroness to view other players' hands.");
+
     game.revealHandToPlayer(currentPlayer, targetPlayer);
+
+    if (secondTarget != null) {
+      game.revealHandToPlayer(currentPlayer, secondTarget);
+    }
+
     return true;
   }
 }
@@ -839,9 +942,11 @@ public class Game {
     Player newPlayer = new Player(nickname);
     players.add(newPlayer);
     scores.put(nickname, 0);
+    /*
     if ("j1".equals(nickname)) {
       scores.put(nickname, 3);
     }
+    */
     return true;
   }
 
@@ -906,7 +1011,9 @@ public class Game {
 
     // Send gameplay commands right after rules
     TCPServer.broadcast("\nGameplay commands:");
-    TCPServer.broadcast("- /play <card> [target] [guess] : Play a card");
+    TCPServer.broadcast(
+        "- /play <card> [target] [guess] : Play a card (guess must be a number indicating the"
+            + " values of the card you are guessing)");
     TCPServer.broadcast("- /hand : View your current hand");
     TCPServer.broadcast("- /score : View current scores");
     TCPServer.broadcast("- /explain <card> : Get card explanation");
@@ -1078,6 +1185,8 @@ public class Game {
     player.setAlive(false);
     TCPServer.broadcast("- " + player.getName() + " is out of the round.");
     TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
+    TCPServer.broadcast(
+        "- " + player.getName() + "'s discarded cards: " + player.getDiscardPile().toString());
 
     // Show remaining players and turn order
     List<Player> alivePlayers = getAlivePlayers();
@@ -1090,7 +1199,6 @@ public class Game {
         }
       }
       TCPServer.broadcast(remainingPlayers.toString());
-      TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
     }
   }
 
@@ -1165,11 +1273,7 @@ public class Game {
     }
   }
 
-  /**
-   * Returns a list of players who are still alive in the current round.
-   *
-   * @return a list of alive players
-   */
+  /** Returns a list of players still alive in the current round. */
   private List<Player> getAlivePlayers() {
     List<Player> alive = new ArrayList<>();
     for (Player p : players) {
@@ -1193,67 +1297,160 @@ public class Game {
    */
   private void endRound() {
     List<Player> alive = getAlivePlayers();
-    Player roundWinner = null;
+    List<Player> roundWinners = new ArrayList<>(); // Changed to support multiple winners
+
     if (alive.size() == 1) {
-      roundWinner = alive.get(0);
+      roundWinners.add(alive.get(0));
     } else {
-      int highestValue = -1;
+      double highestValue = -1;
+      // First pass: find highest value
       for (Player p : alive) {
         if (!p.getHand().isEmpty()) {
-          int value = p.getHand().get(0).getValue();
+          Card card = p.getHand().get(0);
+          double value = card.getValue();
+          if (card == Card.BISHOP) {
+            value = 7.5;
+          }
+          value += p.countIncrease;
+          highestValue = Math.max(highestValue, value);
+        }
+      }
 
-          // Increase the value for each Count card found
+      // Second pass: find all players with highest value
+      int highestDiscardSum = -1;
+      for (Player p : alive) {
+        if (!p.getHand().isEmpty()) {
+          Card card = p.getHand().get(0);
+          double value = card.getValue();
+          if (card == Card.BISHOP) {
+            value = 7.5;
+          }
           value += p.countIncrease;
 
-          if (value > highestValue) {
-            highestValue = value;
-            roundWinner = p;
-          } else if (value == highestValue && roundWinner != null) {
-            // Tie-breaker: higher sum of discard pile values wins.
-            int currentSum = p.getDiscardPileSum();
-            int winnerSum = roundWinner.getDiscardPileSum();
-            if (currentSum > winnerSum) {
-              roundWinner = p;
+          if (value == highestValue) {
+            int discardSum = p.getDiscardPileSum();
+            if (discardSum > highestDiscardSum) {
+              roundWinners.clear();
+              roundWinners.add(p);
+              highestDiscardSum = discardSum;
+            } else if (discardSum == highestDiscardSum) {
+              roundWinners.add(p); // Add tied players
             }
           }
         }
       }
     }
-    if (roundWinner != null) {
-      TCPServer.broadcast("\n👑 Round " + round + " winner: " + roundWinner.getName());
-      awardToken(roundWinner, false);
+
+    // Award tokens to all winners
+    for (Player winner : roundWinners) {
+      TCPServer.broadcast("\n👑 Round " + round + " winner: " + winner.getName());
+      awardToken(winner, false);
+
+      // Handle Jester targets
       for (Player player : players) {
-        if (player.jesterTarget == roundWinner) {
-          TCPServer.broadcast("Jester winner: " + player.getName());
-          awardToken(player, true);
+        if (player.jesterTarget == winner) {
+          TCPServer.broadcast(
+              "🃏 "
+                  + player.getName()
+                  + " gains a Token of Affection for correctly choosing "
+                  + winner.getName()
+                  + " with Jester!");
+          awardToken(player, true); // true means check for game end
         }
       }
     }
+
+    // Check for game winners
+    int maxTokens = 0;
+    List<Player> gameWinners = new ArrayList<>();
     for (Player p : players) {
-      if (scores.getOrDefault(p.getName(), 0) >= tokensNeededToWin()) {
+      int tokens = scores.getOrDefault(p.getName(), 0);
+      if (tokens >= tokensNeededToWin()) {
+        if (tokens > maxTokens) {
+          gameWinners.clear();
+          gameWinners.add(p);
+          maxTokens = tokens;
+        } else if (tokens == maxTokens) {
+          gameWinners.add(p);
+        }
+      }
+    }
+
+    if (!gameWinners.isEmpty()) {
+      if (gameWinners.size() == 1) {
         endGame();
+      } else {
+        // Multiple winners - play tiebreaker round
+        TCPServer.broadcast("\n🎭 Multiple players have reached winning tokens!");
+        StringBuilder tiedPlayers = new StringBuilder("Tied players: ");
+        for (int i = 0; i < gameWinners.size(); i++) {
+          tiedPlayers.append(gameWinners.get(i).getName());
+          if (i < gameWinners.size() - 1) {
+            tiedPlayers.append(", ");
+          }
+        }
+        TCPServer.broadcast(tiedPlayers.toString());
+        TCPServer.broadcast("A tiebreaker round will be played between these players!");
+
+        // Start tiebreaker round with only tied players
+        startTiebreakerRound(gameWinners);
         return;
       }
     }
+
+    // Continue with normal round end...
+    startNextRound(roundWinners.isEmpty() ? null : roundWinners.get(0));
+  }
+
+  private void startTiebreakerRound(List<Player> tiebreakerPlayers) {
+    // Save non-tiebreaker players
+    List<Player> savedPlayers = new ArrayList<>(players);
+
+    // Clear and set only tiebreaker players
+    players.clear();
+    players.addAll(tiebreakerPlayers);
+
+    // Start new round with tiebreaker players
+    round++;
+    deck = new Deck(players.size());
+
+    // Reset player states for tiebreaker
+    for (Player p : players) {
+      p.setAlive(true);
+      p.clearHand();
+      p.clearDiscardPile();
+      deck.draw(p);
+    }
+
+    // Show tiebreaker status
+    showGameStatus("Tiebreaker Round " + round);
+
+    // Restore all players after tiebreaker
+    players.clear();
+    players.addAll(savedPlayers);
+  }
+
+  private void startNextRound(Player roundWinner) {
     round++;
 
-    // Prepare for a new round: reset player statuses and clear hands/discard piles.
+    // Prepare for a new round: reset player statuses and clear hands/discard piles
     for (Player p : players) {
       p.setAlive(true);
       p.clearHand();
       p.clearDiscardPile();
     }
-    deck.reset();
+    deck = new Deck(players.size());
 
-    // Deal one card to each player.
+    // Deal one card to each player
     for (Player p : players) {
-      deck.draw(p);
+      Card dealtCard = deck.draw(p);
+      TCPServer.sendDirect(p.getName(), "\n🃏 " + dealtCard.getName() + " was added to your hand.");
     }
 
-    // The round winner starts the next round (or default to index 0 if no winner).
+    // Set the round winner as first player (or default to index 0 if no winner)
     currentPlayerIndex = (roundWinner != null) ? players.indexOf(roundWinner) : 0;
 
-    // Show game status with turn order
+    // Show round status with turn order starting from winner
     StringBuilder status =
         new StringBuilder(
             String.format(
@@ -1274,6 +1471,11 @@ public class Game {
     }
     TCPServer.broadcast("Tokens needed to win: " + tokensNeededToWin() + "\n");
 
+    // Draw first card for the starting player
+    Card firstPlayerCard = deck.draw(getCurrentPlayer());
+    TCPServer.sendDirect(
+        getCurrentPlayer().getName(),
+        "🃏 " + firstPlayerCard.getName() + " was added to your hand.");
     TCPServer.broadcast("Current turn: " + getCurrentPlayer().getName());
   }
 
@@ -2073,7 +2275,7 @@ public final class Deck {
 
     cards.add(Card.COUNT);
 
-    cards.add(Card.DOWAGER_QUEEN);
+    cards.add(Card.DOWAGERQUEEN);
 
     cards.add(Card.BISHOP);
 
@@ -2516,7 +2718,7 @@ public enum Card {
    * <p>When discarded, the player compares the card in hand with another player; the higher value
    * loses.
    */
-  DOWAGER_QUEEN(
+  DOWAGERQUEEN(
       7,
       "DowagerQueen",
       "When you discard the DowagerQueen, choose another player still in the round. You and that"
@@ -2587,10 +2789,13 @@ public enum Card {
    * then look at one of the hands without revealing it to others.
    */
   CARDINAL(
-      10,
+      2,
       "Cardinal",
-      "(Value: 10) When you discard the Cardinal, choose two players to swap hands. "
-          + "You may look at one of those player's new hand.",
+      "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you mayinclude"
+          + " yourself), who will switch hands. Then, once the hands are switched, you maylook at"
+          + " the first target's hand without revealing it to any other players. If less than 2"
+          + " playersstill in the round can be chosen, (eg. due to Handmaid or Sycophant), this"
+          + " card isdiscarded without effect.",
       new CardinalEffect()),
 
   /**
@@ -2602,8 +2807,12 @@ public enum Card {
   JESTER(
       0,
       "Jester",
-      "(Value: 0) When you discard the Jester, choose two players (can include yourself). "
-          + "Guess which of them will win this round. If you're right, gain a token.",
+      "(Value: 0) When you discard the Jester, choose another player—ideally, the one you believe"
+          + " is most likely to win theround. It's helpful to place the Jester token provided in"
+          + " the game near the player you chose,so everyone remembers your choice. If you're"
+          + " correct, and your chosen player does win theround, you gain a Token of Affection. If"
+          + " this would give you enough Tokens to win thegame, then you win immediately and the"
+          + " game ends.",
       new JesterEffect()),
 
   /**
@@ -2652,7 +2861,7 @@ public enum Card {
       case "countess" -> COUNTESS;
       case "princess" -> PRINCESS;
       case "bishop" -> BISHOP;
-      case "dowagerqueen", "dowager" -> DOWAGER_QUEEN;
+      case "dowagerqueen", "dowager" -> DOWAGERQUEEN;
       case "constable" -> CONSTABLE;
       case "count" -> COUNT;
       case "sycophant" -> SYCOPHANT;

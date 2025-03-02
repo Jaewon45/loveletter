@@ -1,7 +1,5 @@
 package com.example.loveletter;
 
-import java.util.Locale;
-
 import com.example.loveletter.effect.AssassinEffect;
 import com.example.loveletter.effect.BaronEffect;
 import com.example.loveletter.effect.BaronessEffect;
@@ -20,6 +18,7 @@ import com.example.loveletter.effect.PriestEffect;
 import com.example.loveletter.effect.PrinceEffect;
 import com.example.loveletter.effect.PrincessEffect;
 import com.example.loveletter.effect.SycophantEffect;
+import java.util.Locale;
 
 /**
  * Enumeration representing the cards in the Love Letter game.
@@ -237,11 +236,11 @@ public enum Card {
   CARDINAL(
       2,
       "Cardinal",
-      "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you may"
-          + "include yourself), who will switch hands. Then, once the hands are switched, you may"
-          + "look at the first target's hand without revealing it to any other players. If less than 2 players"
-          + "still in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is"
-          + "discarded without effect.",
+      "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you mayinclude"
+          + " yourself), who will switch hands. Then, once the hands are switched, you maylook at"
+          + " the first target's hand without revealing it to any other players. If less than 2"
+          + " playersstill in the round can be chosen, (eg. due to Handmaid or Sycophant), this"
+          + " card isdiscarded without effect.",
       new CardinalEffect()),
 
   /**
@@ -253,11 +252,12 @@ public enum Card {
   JESTER(
       0,
       "Jester",
-      "(Value: 0) When you discard the Jester, choose another player—ideally, the one you believe is most likely to win the"
-          + "round. It’s helpful to place the Jester token provided in the game near the player you chose,"
-          + "so everyone remembers your choice. If you’re correct, and your chosen player does win the"
-          + "round, you gain a Token of Affection. If this would give you enough Tokens to win the"
-          + "game, then you win immediately and the game ends.",
+      "(Value: 0) When you discard the Jester, choose another player—ideally, the one you believe"
+          + " is most likely to win theround. It's helpful to place the Jester token provided in"
+          + " the game near the player you chose,so everyone remembers your choice. If you're"
+          + " correct, and your chosen player does win theround, you gain a Token of Affection. If"
+          + " this would give you enough Tokens to win thegame, then you win immediately and the"
+          + " game ends.",
       new JesterEffect()),
 
   /**

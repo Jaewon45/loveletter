@@ -14,7 +14,8 @@ public class JesterEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (!hasValidTargets(game, currentPlayer)) {
-      TCPServer.broadcast("- " + currentPlayer.getName() + " discards Jester with no effect (no valid targets).");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards Jester with no effect (no valid targets).");
       return true;
     }
 
@@ -24,7 +25,8 @@ public class JesterEffect implements Effect {
     }
 
     if (targetPlayer == currentPlayer) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Invalid target: Cannot target yourself with Jester.");
+      TCPServer.sendDirect(
+          currentPlayer.getName(), "Invalid target: Cannot target yourself with Jester.");
       return false;
     }
 

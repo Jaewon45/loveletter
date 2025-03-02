@@ -24,7 +24,8 @@ public class KingEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (!hasValidTargets(game, currentPlayer)) {
-      TCPServer.broadcast("- " + currentPlayer.getName() + " discards King with no effect (no valid targets).");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards King with no effect (no valid targets).");
       return true;
     }
 
@@ -53,7 +54,8 @@ public class KingEffect implements Effect {
       targetPlayer.removeCard(theirCard);
 
       // Announce card movements to all players
-      TCPServer.broadcast("- " + currentPlayer.getName() + " and " + targetPlayer.getName() + " swap their hands.");
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " and " + targetPlayer.getName() + " swap their hands.");
       return true;
     }
     return false;
