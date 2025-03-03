@@ -288,7 +288,7 @@ public class Game {
     if (legalMove) {
       currentPlayer.getHand().remove(cardToDiscard);
       currentPlayer.addToDiscardPile(cardToDiscard);
-      
+
       // Clear the forced target after a successful card play
       setForcedTarget(null);
 
@@ -311,8 +311,13 @@ public class Game {
 
     // Check for Constable effect when eliminated
     if (player.getDiscardPile().contains(Card.CONSTABLE)) {
-      TCPServer.broadcast("- " + player.getName() + " reveals Constable in their discard pile!" + player.getName() + " gained a token.");
-      awardToken(player, true);  // true to check for game end immediately
+      TCPServer.broadcast(
+          "- "
+              + player.getName()
+              + " reveals Constable in their discard pile!"
+              + player.getName()
+              + " gained a token.");
+      awardToken(player, true); // true to check for game end immediately
     }
 
     // Show remaining players and turn order
@@ -384,16 +389,15 @@ public class Game {
     // Only check when trying to play King or Prince
     if (cardToPlay.getValue() == 5 || cardToPlay.getValue() == 6) {
       // Check if player has Countess
-      boolean hasCountess = player.getHand().stream()
-          .anyMatch(card -> card == Card.COUNTESS);
+      boolean hasCountess = player.getHand().stream().anyMatch(card -> card == Card.COUNTESS);
 
       if (hasCountess) {
-        TCPServer.sendDirect(player.getName(), 
-            "You must play the Countess when you have King or Prince in hand.");
-        return true;  // Indicates Countess must be played instead
+        TCPServer.sendDirect(
+            player.getName(), "You must play the Countess when you have King or Prince in hand.");
+        return true; // Indicates Countess must be played instead
       }
     }
-    return false;  // Card can be played normally
+    return false; // Card can be played normally
   }
 
   /** Returns a list of players still alive in the current round. */
@@ -467,7 +471,7 @@ public class Game {
     // Award tokens to all winners
     for (Player winner : roundWinners) {
       TCPServer.broadcast("\n👑 Round " + round + " winner: " + winner.getName());
-      awardToken(winner, true);  // This will handle both normal token and Jester tokens
+      awardToken(winner, true); // This will handle both normal token and Jester tokens
     }
 
     // Check for game winners
@@ -677,8 +681,11 @@ public class Game {
     if (targetPlayer == null && !card.getEffect().hasValidTargets(this, currentPlayer)) {
       // Allow discard without effect if no valid targets exist
       TCPServer.broadcast(
-          "- " + currentPlayer.getName() + " discards " + card.getName() + 
-          " with no effect (no valid targets due to Handmaid).");
+          "- "
+              + currentPlayer.getName()
+              + " discards "
+              + card.getName()
+              + " with no effect (no valid targets due to Handmaid).");
       currentPlayer.discard(card);
       nextTurn();
       return;
@@ -686,7 +693,7 @@ public class Game {
 
     // Check Countess rule before playing card
     if (checkCountessRule(currentPlayer, card)) {
-      return;  // Don't allow playing King/Prince when holding Countess
+      return; // Don't allow playing King/Prince when holding Countess
     }
 
     // Apply the card effect
@@ -748,8 +755,7 @@ public class Game {
   public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
     TCPServer.sendDirect(
         currentPlayer.getName(),
-        ("- " + targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString())
-    );
+        ("- " + targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString()));
   }
 
   /**

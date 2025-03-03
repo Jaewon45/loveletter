@@ -470,9 +470,10 @@ public class TCPServer {
             String discardPile = currentGame.getPlayerDiscardPile(targetPlayer);
             if (null == discardPile) {
               send("Error: Player '" + targetPlayer + "' not found.");
-            } else switch (discardPile) {
-                  case "[]" -> send(targetPlayer + "'s discarded cards: No cards discarded yet");
-                  default -> send(targetPlayer + "'s discarded cards: " + discardPile);
+            } else
+              switch (discardPile) {
+                case "[]" -> send(targetPlayer + "'s discarded cards: No cards discarded yet");
+                default -> send(targetPlayer + "'s discarded cards: " + discardPile);
               }
           }
         }

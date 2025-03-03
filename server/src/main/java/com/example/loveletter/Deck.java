@@ -112,7 +112,7 @@ public final class Deck {
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
 
-    assert cards.size() == 16; 
+    assert cards.size() == 16;
   }
 
   /**

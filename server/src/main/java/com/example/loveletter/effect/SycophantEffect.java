@@ -1,10 +1,9 @@
 package com.example.loveletter.effect;
 
-import java.util.List;
-
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
+import java.util.List;
 
 /**
  * Represents the effect of the Sycophant card. Forces the next player to include the selected
