@@ -1,11 +1,12 @@
 package com.example.loveletter.effect;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Prince Effect - Prince Arnaud (5).
@@ -51,20 +52,42 @@ public class PrinceEffect implements Effect {
     TCPServer.broadcast(
         "- "
             + currentPlayer.getName()
-            + " uses Prince. "
+            + " uses Prince targeting "
             + targetPlayer.getName()
-            + " discards "
-            + discardedCards.get(0).getName()
             + ".");
+    
+    // Check if Princess was discarded
+    if (discardedCards.get(0) == Card.PRINCESS) {
+      TCPServer.broadcast(
+          "- " + targetPlayer.getName() + " discarded the Princess and is eliminated!");
+      targetPlayer.addToDiscardPile(discardedCards.get(0));
+      game.eliminatePlayer(targetPlayer);
+      return true;
+    }
 
-    // Show discard pile
-    TCPServer.broadcast("- " + targetPlayer.getName() + "'s discarded cards: " + discardedCards);
+    // Add card to discard pile and announce
+    targetPlayer.addToDiscardPile(discardedCards.get(0));
+    TCPServer.broadcast(
+        "- " + targetPlayer.getName() + " discards " + discardedCards.get(0).getName() + ".");
 
-    // Draw new card silently and then announce it
-    Card newCard = game.getDeck().draw(targetPlayer);
+    // Draw new card - if deck is empty, draw face-down card
+    Card newCard;
+    if (game.getDeck().isEmpty()) {
+      if (game.getDeck().drawFaceDownCard() != null) {
+        TCPServer.broadcast("- Deck is empty, drawing the face-down card from the start of the round.");
+        newCard = game.getDeck().drawFaceDownCard();
+      } else {
+        TCPServer.broadcast("- Deck is empty and face-down card was already used. No card can be drawn.");
+        return true;
+      }
+    } else {
+      newCard = game.getDeck().draw(targetPlayer);
+    }
+
+    // Inform target of their new card
     TCPServer.sendDirect(
         targetPlayer.getName(), "🃏 " + newCard.getName() + " was added to your hand.");
-    TCPServer.broadcast(targetPlayer.getName() + " draws a new card.");
+    TCPServer.broadcast("- " + targetPlayer.getName() + " draws a new card.");
 
     return true;
   }

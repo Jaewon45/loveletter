@@ -9,7 +9,8 @@ public final class Deck {
 
   private List<Card> cards = new ArrayList<>();
   private final int numberOfPlayers;
-  private Card[] removedCards = new Card[3];
+  private Card faceDownCard;  // Store the face-down card
+  private Card[] faceUpCards = new Card[3];  // For 2-player game
 
   /**
    * Constructs a new deck based on the number of players.
@@ -31,18 +32,21 @@ public final class Deck {
     }
     shuffle();
 
-    cards.remove(cards.size() - 1);
+    // Remove and store face-down card
+    faceDownCard = cards.remove(cards.size() - 1);
+    TCPServer.broadcast("A card has been removed face-down from the deck.");
 
     if (numberOfPlayers == 2) {
-      removedCards[0] = cards.remove(cards.size() - 1);
-      removedCards[1] = cards.remove(cards.size() - 1);
-      removedCards[2] = cards.remove(cards.size() - 1);
+      // For 2 players, remove 3 more cards face-up
+      faceUpCards[0] = cards.remove(cards.size() - 1);
+      faceUpCards[1] = cards.remove(cards.size() - 1);
+      faceUpCards[2] = cards.remove(cards.size() - 1);
 
-      StringBuilder removedCardsMessage = new StringBuilder("Removed Cards: ");
-      for (Card card : removedCards) {
-        removedCardsMessage.append(card.toString()).append(" ");
+      StringBuilder faceUpMessage = new StringBuilder("Face-up removed cards: ");
+      for (Card card : faceUpCards) {
+        faceUpMessage.append(card.getName()).append(" ");
       }
-      TCPServer.broadcast(removedCardsMessage.toString().trim());
+      TCPServer.broadcast(faceUpMessage.toString().trim());
     }
   }
 
@@ -111,11 +115,18 @@ public final class Deck {
   public void reset() {
     Deck deck = new Deck(numberOfPlayers);
     this.cards = deck.cards;
-    this.removedCards = deck.removedCards;
+    this.faceDownCard = deck.faceDownCard;
+    this.faceUpCards = deck.faceUpCards;
   }
 
-  public Card[] getRemovedCards() {
-    return removedCards;
+  /**
+   * Gets the face-down card when deck is empty (for Prince effect).
+   * @return the face-down card
+   */
+  public Card drawFaceDownCard() {
+    Card card = faceDownCard;
+    faceDownCard = null;
+    return card;
   }
 
   private void initDeckExtra() {

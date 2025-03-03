@@ -741,7 +741,7 @@ public class Game {
   public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
     TCPServer.sendDirect(
         currentPlayer.getName(),
-        targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString());
+        "- " + targetPlayer.getHand().toString()) + " from " + targetPlayer.getName() + "'s hand is ";
   }
 
   /**
