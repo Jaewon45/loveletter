@@ -1,11 +1,11 @@
 package com.example.loveletter.effect;
 
+import java.util.List;
+
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Represents the effect of the Cardinal card. Allows two players to swap hands and lets the current
@@ -39,10 +39,23 @@ public class CardinalEffect implements Effect {
       return false;
     }
 
-    // Swap hands between target players
-    List<Card> tempHand = new ArrayList<>(targetPlayer.getHand());
-    targetPlayer.setHand(secondTarget.getHand());
-    secondTarget.setHand(tempHand);
+    // Get cards to swap
+    Card firstCard = targetPlayer.getHand().get(0);
+    Card secondCard = secondTarget.getHand().get(0);
+
+    // If either player is the current player, make sure we don't swap the Cardinal
+    if (targetPlayer == currentPlayer && firstCard.equals(Card.CARDINAL)) {
+      firstCard = targetPlayer.getHand().get(1);
+    }
+    if (secondTarget == currentPlayer && secondCard.equals(Card.CARDINAL)) {
+      secondCard = secondTarget.getHand().get(1);
+    }
+
+    // Perform swap
+    targetPlayer.getHand().remove(firstCard);
+    secondTarget.getHand().remove(secondCard);
+    targetPlayer.addCard(secondCard);
+    secondTarget.addCard(firstCard);
 
     // Announce the swap
     TCPServer.broadcast(

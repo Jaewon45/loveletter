@@ -58,7 +58,13 @@ public class GuardEffect implements Effect {
       } else if (theirCard.getValue() == guess) {
         TCPServer.broadcast(
             "- The guess was " + guess + " (" + theirCard.getName() + "), which was correct!");
+        
+        // Add the card to their discard pile before eliminating them
+        targetPlayer.addToDiscardPile(theirCard);
+        targetPlayer.getHand().remove(theirCard);
+        
         game.eliminatePlayer(targetPlayer);
+        return true;
       } else {
         TCPServer.broadcast("- The guess was " + guess + ", which was incorrect.");
       }

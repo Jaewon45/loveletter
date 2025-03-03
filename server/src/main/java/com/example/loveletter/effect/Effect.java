@@ -1,9 +1,8 @@
 package com.example.loveletter.effect;
 
-import java.util.List;
-
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
+import java.util.List;
 
 /**
  * Represents the special power of a card.

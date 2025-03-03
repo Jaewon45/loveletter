@@ -174,6 +174,39 @@ public class TCPServer {
       this.socket = socket;
     }
 
+    private boolean isValidNickname(String nickname) {
+      // Check length
+      if (nickname == null || nickname.length() <= 1 || nickname.length() > 10) {
+        send("Error: Nickname must be 2-10 characters long.");
+        return false;
+      }
+
+      // Check alphanumeric
+      if (!nickname.matches("[a-zA-Z0-9]+")) {
+        send("Error: Nickname must contain only letters and numbers.");
+        return false;
+      }
+
+      // Check if it's a card name
+      String nickLower = nickname.toLowerCase();
+      for (Card card : Card.values()) {
+        if (nickLower.equals(card.getName().toLowerCase())) {
+          send("Error: Nickname cannot be a card name.");
+          return false;
+        }
+      }
+
+      // Check if nickname is already in use
+      synchronized (clients) {
+        if (clients.containsKey(nickname)) {
+          send("Error: Nickname already in use. Please try again.");
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     /**
      * Runs the client handler thread.
      *
@@ -196,26 +229,20 @@ public class TCPServer {
                     new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
                 true);
 
-        // First message must be the nickname.
+        // First message must be the nickname
         boolean nicknameAccepted = false;
         while (!nicknameAccepted) {
           nickname = in.readLine();
-          if (nickname == null || nickname.trim().isEmpty()) {
-            send("Error: Nickname cannot be empty. Please try again.");
-            continue;
-          }
-          synchronized (clients) {
-            if (clients.containsKey(nickname)) {
-              send("Error: Nickname already in use. Please try again.");
-              continue;
+          if (isValidNickname(nickname)) {
+            synchronized (clients) {
+              clients.put(nickname, this);
+              nicknameAccepted = true;
             }
-            clients.put(nickname, this);
-            nicknameAccepted = true;
           }
         }
 
         // Send welcome messages
-        send("Welcome " + nickname + "!");
+        send("👋 Welcome " + nickname + "!");
         send("\nAvailable commands:");
         send("- /create : Create a new game");
         send("- /join : Join an existing game");
@@ -276,7 +303,7 @@ public class TCPServer {
      */
     private void processCommand(String message) {
       String[] tokens = message.split(" ", 3);
-      String command = tokens[0];
+      String command = tokens[0].toLowerCase(Locale.ENGLISH); // Make command case-insensitive
       switch (command) {
         case "/dm" -> {
           // Direct message: /dm recipient message.
@@ -318,6 +345,10 @@ public class TCPServer {
               send("Error: Game is full. Maximum 8 players allowed.");
             }
           }
+        }
+        case "join" -> { // Add case without forward slash
+          // Redirect to /join logic
+          processCommand("/join");
         }
         case "/start" -> {
           if (currentGame == null) {
@@ -368,7 +399,14 @@ public class TCPServer {
           CardAction.Builder actionBuilder = new CardAction.Builder(nickname, card);
 
           // Parse parameters based on card requirements
-          if (card.getEffect().requiresSecondTarget()) {
+          if (card == Card.BARONESS) {
+            if (playTokens.length >= 3) {
+              actionBuilder.withTarget(playTokens[2]);
+              if (playTokens.length >= 4) {
+                actionBuilder.withSecondTarget(playTokens[3]);
+              }
+            }
+          } else if (card.getEffect().requiresSecondTarget()) {
             if (playTokens.length < 4) {
               send("Error: This card requires two target players");
               break;
@@ -435,7 +473,14 @@ public class TCPServer {
           }
           send(values.toString());
         }
-        default -> send("Error: Unknown command.");
+        default -> {
+          // Try processing the command without the forward slash
+          if (message.startsWith("/")) {
+            processCommand(message.substring(1));
+          } else {
+            send("Error: Unknown command.");
+          }
+        }
       }
     }
 

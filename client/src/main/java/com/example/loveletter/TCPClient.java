@@ -75,18 +75,15 @@ public class TCPClient {
                       new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
                   true)) {
 
-        // Prompt for a valid nickname.
+        // Prompt for nickname
         String nickname;
         while (true) {
           System.out.print("Enter your nickname: ");
           nickname = consoleReader.readLine().trim();
-          if (nickname.matches("[a-zA-Z0-9]+")) { // Avoid spaces or special characters
+          if (!nickname.isEmpty()) {
             break;
-          } else {
-            System.out.println(
-                "Nickname must be alphanumeric without spaces or special characters. Please try"
-                    + " again.");
           }
+          System.out.println("Nickname cannot be empty. Please try again.");
         }
         server.println(nickname);
 

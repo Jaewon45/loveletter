@@ -3,7 +3,6 @@ package com.example.loveletter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -31,6 +30,9 @@ public class Game {
 
   /** Indicates whether the game has started. */
   private boolean started = false;
+
+  /** The player that must be targeted by the next effect (for Sycophant). */
+  private Player forcedTarget = null;
 
   /** Constructs a new Love Letter game. */
   public Game() {}
@@ -125,7 +127,8 @@ public class Game {
     TCPServer.broadcast("- /hand : View your current hand");
     TCPServer.broadcast("- /score : View current scores");
     TCPServer.broadcast("- /explain <card> : Get card explanation");
-    TCPServer.broadcast("- /values : View all card values\n");
+    TCPServer.broadcast("- /values : View all card values");
+    TCPServer.broadcast("- /discarded <player> : Show a player's discarded cards\n");
 
     // Show current game status
     showGameStatus("Game Setup");
@@ -233,6 +236,19 @@ public class Game {
    */
   public boolean discardCard(
       Player currentPlayer, Card cardToDiscard, Player target, int guess, Player secondTarget) {
+    // Check if there's a forced target from Sycophant
+    Player currentForcedTarget = getForcedTarget();
+    if (currentForcedTarget != null && 
+        (cardToDiscard.getEffect().requiresSecondTarget() || target != null)) {
+      // For cards that require targets, either target can be the forced target
+      if (target != currentForcedTarget && (secondTarget == null || secondTarget != currentForcedTarget)) {
+        TCPServer.sendDirect(
+            currentPlayer.getName(),
+            "Due to Sycophant's effect, you must include " + currentForcedTarget.getName() + " as a target.");
+        return false;
+      }
+    }
+
     // Apply the card effect first to check if it is a legal move.
     if (target != null && target.isProtectedByHandmaid()) {
       boolean allProtected = true;
@@ -267,21 +283,18 @@ public class Game {
     }
     boolean legalMove =
         cardToDiscard.getEffect().apply(this, currentPlayer, target, guess, secondTarget);
-    if (!legalMove) {
-      TCPServer.sendDirect(
-          currentPlayer.getName(),
-          "Type /explain "
-              + cardToDiscard.getName().toLowerCase(Locale.ENGLISH)
-              + " to see how this card works.");
-      return false;
-    }
+    if (legalMove) {
+      currentPlayer.getHand().remove(cardToDiscard);
+      currentPlayer.addToDiscardPile(cardToDiscard);
+      
+      // Clear the forced target after a successful card play
+      setForcedTarget(null);
 
-    currentPlayer.getHand().remove(cardToDiscard);
-    currentPlayer.addToDiscardPile(cardToDiscard);
-    if (cardToDiscard.getValue() == 8) {
-      eliminatePlayer(currentPlayer);
+      if (cardToDiscard.getValue() == 8) {
+        eliminatePlayer(currentPlayer);
+      }
     }
-    return true;
+    return legalMove;
   }
 
   /**
@@ -293,8 +306,6 @@ public class Game {
     player.setAlive(false);
     TCPServer.broadcast("- " + player.getName() + " is out of the round.");
     TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
-    TCPServer.broadcast(
-        "- " + player.getName() + "'s discarded cards: " + player.getDiscardPile().toString());
 
     // Show remaining players and turn order
     List<Player> alivePlayers = getAlivePlayers();
@@ -703,8 +714,6 @@ public class Game {
     return handRepresentation.toString();
   }
 
-  private Player forcedTarget;
-
   /**
    * Sets a forced target for the next action.
    *
@@ -782,5 +791,19 @@ public class Game {
    */
   public boolean hasPlayer(String nickname) {
     return players.stream().anyMatch(p -> p.getName().equals(nickname));
+  }
+
+  /**
+   * Gets a player's discarded cards as a string.
+   *
+   * @param nickname the player's nickname
+   * @return the discarded cards string, or null if player not found
+   */
+  public String getPlayerDiscardPile(String nickname) {
+    Player player = getPlayerByNickname(nickname);
+    if (player != null) {
+      return player.getDiscardPile().toString();
+    }
+    return null;
   }
 }

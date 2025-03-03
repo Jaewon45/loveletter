@@ -1,5 +1,7 @@
 package com.example.loveletter;
 
+import java.util.Locale;
+
 import com.example.loveletter.effect.AssassinEffect;
 import com.example.loveletter.effect.BaronEffect;
 import com.example.loveletter.effect.BaronessEffect;
@@ -18,7 +20,6 @@ import com.example.loveletter.effect.PriestEffect;
 import com.example.loveletter.effect.PrinceEffect;
 import com.example.loveletter.effect.PrincessEffect;
 import com.example.loveletter.effect.SycophantEffect;
-import java.util.Locale;
 
 /**
  * Enumeration representing the cards in the Love Letter game.

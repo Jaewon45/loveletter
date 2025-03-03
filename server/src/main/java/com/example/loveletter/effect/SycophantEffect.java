@@ -5,8 +5,8 @@ import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
 
 /**
- * Represents the effect of the Sycophant card. Forces the next player to target the selected player
- * with their effect.
+ * Represents the effect of the Sycophant card. Forces the next player to include 
+ * the selected player as a target if their card has a targeting effect.
  */
 public class SycophantEffect implements Effect {
 
@@ -14,15 +14,20 @@ public class SycophantEffect implements Effect {
   public boolean apply(
       Game game, Player currentPlayer, Player targetPlayer, int guess, Player secondTarget) {
     if (targetPlayer == null) {
-      return false; // Target is required
+      TCPServer.sendDirect(currentPlayer.getName(), "Sycophant requires a target player.");
+      return false;
     }
+
+    if (!targetPlayer.isAlive()) {
+      TCPServer.sendDirect(currentPlayer.getName(), "Cannot target an eliminated player.");
+      return false;
+    }
+
     game.setForcedTarget(targetPlayer);
     TCPServer.broadcast(
-        "- "
-            + currentPlayer.getName()
-            + " uses Sycophant. The next player must target "
-            + targetPlayer.getName()
-            + ".");
+        "- " + currentPlayer.getName() + " uses Sycophant targeting " + targetPlayer.getName() + 
+        ". The next card played must include " + targetPlayer.getName() + " as a target if it has a targeting effect.");
+
     return true;
   }
 }
