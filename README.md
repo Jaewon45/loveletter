@@ -31,9 +31,6 @@ gradle wrapper
 ./gradlew client:run
 ```
 
-## Running Tests
-
-
 ## Architecture
 
 Server Architecture:
