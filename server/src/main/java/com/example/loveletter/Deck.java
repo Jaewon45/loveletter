@@ -96,13 +96,13 @@ public final class Deck {
   /** Initializes the deck by adding one copy of each card. */
   private void initDeck() {
     // Debug mode - limited card set for testing
-    cards.add(Card.DOWAGERQUEEN);  // 7
     cards.add(Card.CONSTABLE);     // 6
     cards.add(Card.COUNT);         // 5
-    cards.add(Card.SYCOPHANT);     // 4
     cards.add(Card.COUNTESS);      // 7
     cards.add(Card.KING);          // 6
     cards.add(Card.JESTER);        // 0
+    cards.add(Card.GUARD);
+    cards.add(Card.PRIEST);
 
     // Comment out original deck initialization
     /*

@@ -218,7 +218,7 @@ public class Game {
       Card drawnCard = deck.draw(getCurrentPlayer());
       TCPServer.sendDirect(
           getCurrentPlayer().getName(), "🃏 " + drawnCard.getName() + " was added to your hand.");
-      checkCountessRule(getCurrentPlayer());
+      checkCountessRule(getCurrentPlayer(), drawnCard);
     }
     return true;
   }
@@ -307,6 +307,12 @@ public class Game {
     TCPServer.broadcast("- " + player.getName() + " is out of the round.");
     TCPServer.sendDirect(player.getName(), "You are out of the round.");
 
+    // Check for Constable effect when eliminated
+    if (player.getDiscardPile().contains(Card.CONSTABLE)) {
+      TCPServer.broadcast("- " + player.getName() + " reveals Constable in their discard pile!" + player.getName() + " gained a token.");
+      awardToken(player, true);  // true to check for game end immediately
+    }
+
     // Show remaining players and turn order
     List<Player> alivePlayers = getAlivePlayers();
     if (alivePlayers.size() > 1) {
@@ -372,24 +378,20 @@ public class Game {
    *
    * @param player the player to check for the Countess rule
    */
-  public void checkCountessRule(Player player) {
-    boolean hasCountess = false;
-    boolean hasRoyal = false;
-    Card countessCard = null;
+  public boolean checkCountessRule(Player player, Card cardToPlay) {
+    // Only check when trying to play King or Prince
+    if (cardToPlay.getValue() == 5 || cardToPlay.getValue() == 6) {
+      // Check if player has Countess
+      boolean hasCountess = player.getHand().stream()
+          .anyMatch(card -> card == Card.COUNTESS);
 
-    for (Card card : player.getHand()) {
-      if (card.getValue() == 7) {
-        hasCountess = true;
-        countessCard = card;
-      } else if (card.getValue() == 5 || card.getValue() == 6) {
-        hasRoyal = true;
+      if (hasCountess) {
+        TCPServer.sendDirect(player.getName(), 
+            "You must play the Countess when you have King or Prince in hand.");
+        return true;  // Indicates Countess must be played instead
       }
     }
-
-    if (hasCountess && hasRoyal) {
-      // Discard the Countess without a target or guess (-1 indicates unused).
-      discardCard(player, countessCard, null, -1, null);
-    }
+    return false;  // Card can be played normally
   }
 
   /** Returns a list of players still alive in the current round. */
@@ -463,20 +465,7 @@ public class Game {
     // Award tokens to all winners
     for (Player winner : roundWinners) {
       TCPServer.broadcast("\n👑 Round " + round + " winner: " + winner.getName());
-      awardToken(winner, false);
-
-      // Handle Jester targets
-      for (Player player : players) {
-        if (player.jesterTarget == winner) {
-          TCPServer.broadcast(
-              "🃏 "
-                  + player.getName()
-                  + " gains a Token of Affection for correctly choosing "
-                  + winner.getName()
-                  + " with Jester!");
-          awardToken(player, true); // true means check for game end
-        }
-      }
+      awardToken(winner, true);  // This will handle both normal token and Jester tokens
     }
 
     // Check for game winners
@@ -693,6 +682,11 @@ public class Game {
       return;
     }
 
+    // Check Countess rule before playing card
+    if (checkCountessRule(currentPlayer, card)) {
+      return;  // Don't allow playing King/Prince when holding Countess
+    }
+
     // Apply the card effect
     boolean success =
         discardCard(currentPlayer, card, targetPlayer, action.getGuess(), secondTarget);
@@ -773,10 +767,10 @@ public class Game {
             "- " + player.getName() + " gains a token from their Jester prediction!");
         scores.put(player.getName(), scores.getOrDefault(player.getName(), 0) + 1);
       }
+    }
 
     if (endGameIfEnough && scores.get(winner.getName()) >= tokensNeededToWin()) {
       endGame();
-      }
     }
   }
 
@@ -818,5 +812,16 @@ public class Game {
       return player.getDiscardPile().toString();
     }
     return null;
+  }
+
+  /**
+   * Draws a new card for the target player if the deck is not empty.
+   *
+   * @param targetPlayer The player drawing the card.
+   */
+  public void drawCardFor(Player targetPlayer) {
+    if (!deck.isEmpty()) {
+      deck.draw(targetPlayer);
+    }
   }
 }
