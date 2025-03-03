@@ -12,12 +12,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * TCPClient connects to the Love Letter server and facilitates user input/output.
- * works as an entry poin for the client application  so that java runtime can execute it
+ * TCPClient connects to the Love Letter server and facilitates user input/output. works as an entry
+ * poin for the client application so that java runtime can execute it
  *
  * <p>The client connects to the server using the host and port specified by system properties
  * (defaults: host = "localhost", port = 12345). It prompts the user for a nickname, sends messages
- * from the user to the server via socket, and displays incoming messages from the server asynchronously.
+ * from the user to the server via socket, and displays incoming messages from the server
+ * asynchronously.
  */
 public class TCPClient {
   // encapsulation by private constants, modularity by separate concerns
@@ -33,7 +34,6 @@ public class TCPClient {
   private static final int SERVER_PORT =
       Integer.parseInt(System.getProperty("server.port", "12345"));
 
-
   /**
    * The hostname of the server.
    *
@@ -46,7 +46,6 @@ public class TCPClient {
    */
   static boolean reconnecting = false;
 
-
   /**
    * The main method initiates the client, connects to the server, and handles input/output.
    *
@@ -58,8 +57,7 @@ public class TCPClient {
         new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     while (true) { // infinite loop to keep retrying connections
-      try (Socket socket =
-              new Socket(SERVER_HOST, SERVER_PORT); // create socket conn to the server
+      try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT); // create socket conn to the server
           BufferedReader in =
               new BufferedReader( // eads data from the server
                   new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));

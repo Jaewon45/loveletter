@@ -9,8 +9,8 @@ public final class Deck {
 
   private List<Card> cards = new ArrayList<>();
   private final int numberOfPlayers;
-  private Card faceDownCard;  // Store the face-down card
-  private Card[] faceUpCards = new Card[3];  // For 2-player game
+  private Card faceDownCard; // Store the face-down card
+  private Card[] faceUpCards = new Card[3]; // For 2-player game
 
   /**
    * Constructs a new deck based on the number of players.
@@ -36,15 +36,20 @@ public final class Deck {
     StringBuilder deckOrder = new StringBuilder("\nDEBUG - Full deck order (bottom to top):");
     for (int i = 0; i < cards.size(); i++) {
       Card card = cards.get(i);
-      deckOrder.append("\n").append(i + 1).append(". ")
-          .append(card.getValue()).append(": ")
+      deckOrder
+          .append("\n")
+          .append(i + 1)
+          .append(". ")
+          .append(card.getValue())
+          .append(": ")
           .append(card.getName());
     }
     TCPServer.broadcast(deckOrder.toString());
 
     // Remove and store face-down card
     faceDownCard = cards.remove(cards.size() - 1);
-    TCPServer.broadcast("\nFace-down card removed: " + faceDownCard.getValue() + ": " + faceDownCard.getName());
+    TCPServer.broadcast(
+        "\nFace-down card removed: " + faceDownCard.getValue() + ": " + faceDownCard.getName());
 
     if (numberOfPlayers == 2) {
       // For 2 players, remove 3 more cards face-up
@@ -54,8 +59,7 @@ public final class Deck {
 
       StringBuilder faceUpMessage = new StringBuilder("Face-up removed cards:");
       for (Card card : faceUpCards) {
-        faceUpMessage.append("\n- ").append(card.getValue())
-            .append(": ").append(card.getName());
+        faceUpMessage.append("\n- ").append(card.getValue()).append(": ").append(card.getName());
       }
       TCPServer.broadcast(faceUpMessage.toString());
     }
@@ -132,6 +136,7 @@ public final class Deck {
 
   /**
    * Gets the face-down card when deck is empty (for Prince effect).
+   *
    * @return the face-down card
    */
   public Card drawFaceDownCard() {
@@ -142,10 +147,10 @@ public final class Deck {
 
   private void initDeckExtra() {
     cards.add(Card.ASSASSIN);
-    cards.add(Card.ASSASSIN);  // Add second Assassin
+    cards.add(Card.ASSASSIN); // Add second Assassin
 
     cards.add(Card.JESTER);
-    cards.add(Card.JESTER);    // Add second Jester
+    cards.add(Card.JESTER); // Add second Jester
 
     cards.add(Card.CARDINAL);
     cards.add(Card.CARDINAL);
@@ -157,7 +162,7 @@ public final class Deck {
     cards.add(Card.SYCOPHANT);
 
     cards.add(Card.COUNT);
-    cards.add(Card.COUNT);    
+    cards.add(Card.COUNT);
 
     cards.add(Card.DOWAGERQUEEN);
     cards.add(Card.DOWAGERQUEEN);
@@ -165,6 +170,6 @@ public final class Deck {
     cards.add(Card.BISHOP);
     cards.add(Card.BISHOP);
 
-    assert cards.size() == 32;  // Now should be 32 total (16 original + 16 extra)
+    assert cards.size() == 32; // Now should be 32 total (16 original + 16 extra)
   }
 }

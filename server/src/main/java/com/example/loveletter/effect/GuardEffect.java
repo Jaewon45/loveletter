@@ -33,12 +33,16 @@ public class GuardEffect implements Effect {
     // Check if there are any valid targets
     if (!hasValidTargets(game, currentPlayer)) {
       TCPServer.broadcast(
-          "- " + currentPlayer.getName() + " discards Guard with no effect (no valid targets due to Handmaid).");
-      return true;  // Card is still discarded
+          "- "
+              + currentPlayer.getName()
+              + " discards Guard with no effect (no valid targets due to Handmaid).");
+      return true; // Card is still discarded
     }
 
     if (targetPlayer == null || !targetPlayer.isAlive() || targetPlayer.isProtectedByHandmaid()) {
-      TCPServer.sendDirect(currentPlayer.getName(), "Guard: invalid target (player must be in the round and not protected by Handmaid).");
+      TCPServer.sendDirect(
+          currentPlayer.getName(),
+          "Guard: invalid target (player must be in the round and not protected by Handmaid).");
       return false;
     }
 
@@ -58,11 +62,11 @@ public class GuardEffect implements Effect {
       } else if (theirCard.getValue() == guess) {
         TCPServer.broadcast(
             "- The guess was " + guess + " (" + theirCard.getName() + "), which was correct!");
-        
+
         // Add the card to their discard pile before eliminating them
         targetPlayer.addToDiscardPile(theirCard);
         targetPlayer.getHand().remove(theirCard);
-        
+
         game.eliminatePlayer(targetPlayer);
         return true;
       } else {

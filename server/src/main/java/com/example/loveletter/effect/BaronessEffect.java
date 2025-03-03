@@ -23,11 +23,13 @@ public class BaronessEffect implements Effect {
         "- " + currentPlayer.getName() + " uses Baroness to view other players' hands.");
 
     game.revealHandToPlayer(currentPlayer, targetPlayer);
-    TCPServer.sendDirect(targetPlayer.getName(), "- " + currentPlayer.getName() + " has viewed your hand.");
+    TCPServer.sendDirect(
+        targetPlayer.getName(), "- " + currentPlayer.getName() + " has viewed your hand.");
 
     if (secondTarget != null) {
       game.revealHandToPlayer(currentPlayer, secondTarget);
-      TCPServer.sendDirect(secondTarget.getName(), "- " + currentPlayer.getName() + " has viewed your hand.");
+      TCPServer.sendDirect(
+          secondTarget.getName(), "- " + currentPlayer.getName() + " has viewed your hand.");
     }
 
     return true;

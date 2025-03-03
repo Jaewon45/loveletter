@@ -1,14 +1,13 @@
 package com.example.loveletter.effect;
 
-import java.util.List;
-
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
+import java.util.List;
 
 /**
- * Represents the effect of the Sycophant card. Forces the next player to include 
- * the selected player as a target if their card has a targeting effect.
+ * Represents the effect of the Sycophant card. Forces the next player to include the selected
+ * player as a target if their card has a targeting effect.
  */
 public class SycophantEffect implements Effect {
 
@@ -27,8 +26,13 @@ public class SycophantEffect implements Effect {
 
     game.setForcedTarget(targetPlayer);
     TCPServer.broadcast(
-        "- " + currentPlayer.getName() + " uses Sycophant targeting " + targetPlayer.getName() + 
-        ". The next card played must include " + targetPlayer.getName() + " as a target if it has a targeting effect.");
+        "- "
+            + currentPlayer.getName()
+            + " uses Sycophant targeting "
+            + targetPlayer.getName()
+            + ". The next card played must include "
+            + targetPlayer.getName()
+            + " as a target if it has a targeting effect.");
 
     return true;
   }

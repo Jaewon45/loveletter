@@ -26,9 +26,8 @@ import java.util.logging.Logger;
 @SuppressWarnings("CallToPrintStackTrace")
 public class TCPServer {
 
-  private static final Logger LOGGER =
-      Logger.getLogger(
-          TCPServer.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(TCPServer.class.getName());
+
   /**
    * Port on which the server listens (default: 12345, can be overridden via system property
    * "server.port").
@@ -133,7 +132,7 @@ public class TCPServer {
       client.send(message);
       return true;
     }
-    return false; 
+    return false;
   }
 
   /**

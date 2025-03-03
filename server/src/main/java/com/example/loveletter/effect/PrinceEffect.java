@@ -1,12 +1,11 @@
 package com.example.loveletter.effect;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.example.loveletter.Card;
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Prince Effect - Prince Arnaud (5).
@@ -49,12 +48,8 @@ public class PrinceEffect implements Effect {
 
     // Announce the discard
     TCPServer.broadcast(
-        "- "
-            + currentPlayer.getName()
-            + " uses Prince targeting "
-            + targetPlayer.getName()
-            + ".");
-    
+        "- " + currentPlayer.getName() + " uses Prince targeting " + targetPlayer.getName() + ".");
+
     // Check if Princess was discarded
     if (discardedCards.get(0) == Card.PRINCESS) {
       TCPServer.broadcast(

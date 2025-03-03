@@ -1,7 +1,5 @@
 package com.example.loveletter;
 
-import java.util.Locale;
-
 import com.example.loveletter.effect.AssassinEffect;
 import com.example.loveletter.effect.BaronEffect;
 import com.example.loveletter.effect.BaronessEffect;
@@ -20,6 +18,7 @@ import com.example.loveletter.effect.PriestEffect;
 import com.example.loveletter.effect.PrinceEffect;
 import com.example.loveletter.effect.PrincessEffect;
 import com.example.loveletter.effect.SycophantEffect;
+import java.util.Locale;
 
 /**
  * Enumeration representing the cards in the Love Letter game.
@@ -243,9 +242,9 @@ public enum Card {
       "Cardinal",
       "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you may include"
           + " yourself), who will switch hands. Then, once the hands are switched, you may look at"
-          + " the first target player's hand without revealing it to any other players. If less than 2 players still"
-          + " in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is"
-          + " discarded without effect.",
+          + " the first target player's hand without revealing it to any other players. If less"
+          + " than 2 players still in the round can be chosen, (eg. due to Handmaid or Sycophant),"
+          + " this card is discarded without effect.",
       new CardinalEffect()),
 
   /**
