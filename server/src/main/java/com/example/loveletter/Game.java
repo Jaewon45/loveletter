@@ -238,14 +238,16 @@ public class Game {
       Player currentPlayer, Card cardToDiscard, Player target, int guess, Player secondTarget) {
     // Check if there's a forced target from Sycophant
     Player currentForcedTarget = getForcedTarget();
-    if (currentForcedTarget != null && 
-        (cardToDiscard.getEffect().requiresSecondTarget() || target != null)) {
-      // For cards that require targets, either target can be the forced target
-      if (target != currentForcedTarget && (secondTarget == null || secondTarget != currentForcedTarget)) {
-        TCPServer.sendDirect(
-            currentPlayer.getName(),
-            "Due to Sycophant's effect, you must include " + currentForcedTarget.getName() + " as a target.");
-        return false;
+    if (currentForcedTarget != null) {
+      // Only enforce targeting if the card can have targets
+      if (cardToDiscard.getEffect().hasValidTargets(this, currentPlayer)) {
+        // Must include forced target as either primary or secondary target
+        if (target != currentForcedTarget && secondTarget != currentForcedTarget) {
+          TCPServer.sendDirect(
+              currentPlayer.getName(),
+              "Due to Sycophant's effect, you must target " + currentForcedTarget.getName());
+          return false;
+        }
       }
     }
 

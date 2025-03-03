@@ -95,17 +95,6 @@ public final class Deck {
 
   /** Initializes the deck by adding one copy of each card. */
   private void initDeck() {
-    // Debug mode - limited card set for testing
-    cards.add(Card.CONSTABLE);     // 6
-    cards.add(Card.COUNT);         // 5
-    cards.add(Card.COUNTESS);      // 7
-    cards.add(Card.KING);          // 6
-    cards.add(Card.JESTER);        // 0
-    cards.add(Card.GUARD);
-    cards.add(Card.PRIEST);
-
-    // Comment out original deck initialization
-    /*
     cards.add(Card.PRINCESS);
     cards.add(Card.COUNTESS);
     cards.add(Card.KING);
@@ -122,9 +111,8 @@ public final class Deck {
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
     cards.add(Card.GUARD);
-    */
 
-    assert cards.size() == 7;  // Changed from 16 to 7 for debug mode
+    assert cards.size() == 16; 
   }
 
   /**
@@ -151,13 +139,25 @@ public final class Deck {
   }
 
   private void initDeckExtra() {
-    // Debug mode - add second copies
+    cards.add(Card.BISHOP);
+    cards.add(Card.BISHOP);
+    cards.add(Card.DOWAGERQUEEN);
     cards.add(Card.DOWAGERQUEEN);
     cards.add(Card.CONSTABLE);
+    cards.add(Card.CONSTABLE);
+    cards.add(Card.COUNT);
     cards.add(Card.COUNT);
     cards.add(Card.SYCOPHANT);
+    cards.add(Card.SYCOPHANT);
+    cards.add(Card.BARONESS);
+    cards.add(Card.BARONESS);
+    cards.add(Card.CARDINAL);
+    cards.add(Card.CARDINAL);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
     cards.add(Card.JESTER);
+    cards.add(Card.ASSASSIN);
 
-    assert cards.size() == 12;  // Changed for debug mode
+    assert cards.size() == 16;
   }
 }
