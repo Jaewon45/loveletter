@@ -1,5 +1,7 @@
 package com.example.loveletter.effect;
 
+import java.util.List;
+
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
@@ -31,8 +33,20 @@ public class JesterEffect implements Effect {
     }
 
     TCPServer.broadcast(
-        "- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ".");
+        "- " + currentPlayer.getName() + " uses Jester targeting " + targetPlayer.getName() + ", assuming " + targetPlayer.getName() + " wins the round.");
     currentPlayer.setJesterTarget(targetPlayer);
     return true;
+  }
+
+  @Override
+  public boolean canTargetSelf() {
+    return true;
+  }
+
+  @Override
+  public List<Player> validTargets(Game game, Player currentPlayer) {
+    return game.getAlivePlayers().stream()
+        .filter(p -> !p.isProtectedByHandmaid() || p == currentPlayer)
+        .toList();
   }
 }

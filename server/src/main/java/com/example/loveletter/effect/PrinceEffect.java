@@ -24,7 +24,6 @@ public class PrinceEffect implements Effect {
    * @param game the current game instance
    * @param currentPlayer the player who discarded the Prince
    * @param targetPlayer the target player who must discard their hand
-   * @param guess unused for the Prince effect
    * @return true if the effect was successfully applied, false otherwise
    */
   @Override
@@ -70,25 +69,29 @@ public class PrinceEffect implements Effect {
     TCPServer.broadcast(
         "- " + targetPlayer.getName() + " discards " + discardedCards.get(0).getName() + ".");
 
-    // Draw new card - if deck is empty, draw face-down card
-    Card newCard;
-    if (game.getDeck().isEmpty()) {
-      if (game.getDeck().drawFaceDownCard() != null) {
-        TCPServer.broadcast("- Deck is empty, drawing the face-down card from the start of the round.");
-        newCard = game.getDeck().drawFaceDownCard();
-      } else {
-        TCPServer.broadcast("- Deck is empty and face-down card was already used. No card can be drawn.");
-        return true;
-      }
+    // Draw new card - if deck is empty, no new card is drawn
+    if (!game.getDeck().isEmpty()) {
+      Card newCard = game.getDeck().draw(targetPlayer);
+      // Inform target of their new card
+      TCPServer.sendDirect(
+          targetPlayer.getName(), "🃏 " + newCard.getName() + " was added to your hand.");
+      TCPServer.broadcast("- " + targetPlayer.getName() + " draws a new card.");
     } else {
-      newCard = game.getDeck().draw(targetPlayer);
+      TCPServer.broadcast("- Deck is empty, no card can be drawn.");
     }
 
-    // Inform target of their new card
-    TCPServer.sendDirect(
-        targetPlayer.getName(), "🃏 " + newCard.getName() + " was added to your hand.");
-    TCPServer.broadcast("- " + targetPlayer.getName() + " draws a new card.");
-
     return true;
+  }
+
+  @Override
+  public boolean canTargetSelf() {
+    return true;
+  }
+
+  @Override
+  public List<Player> validTargets(Game game, Player currentPlayer) {
+    return game.getAlivePlayers().stream()
+        .filter(p -> !p.isProtectedByHandmaid() || p == currentPlayer)
+        .toList();
   }
 }

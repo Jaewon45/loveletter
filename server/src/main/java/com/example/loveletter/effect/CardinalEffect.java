@@ -81,4 +81,16 @@ public class CardinalEffect implements Effect {
   public boolean requiresSecondTarget() {
     return true;
   }
+
+  @Override
+  public boolean canTargetSelf() {
+    return true;
+  }
+
+  @Override
+  public List<Player> validTargets(Game game, Player currentPlayer) {
+    return game.getAlivePlayers().stream()
+        .filter(p -> !p.isProtectedByHandmaid() || p == currentPlayer)
+        .toList();
+  }
 }

@@ -32,9 +32,19 @@ public final class Deck {
     }
     shuffle();
 
+    // Debug: Print entire deck order
+    StringBuilder deckOrder = new StringBuilder("\nDEBUG - Full deck order (bottom to top):");
+    for (int i = 0; i < cards.size(); i++) {
+      Card card = cards.get(i);
+      deckOrder.append("\n").append(i + 1).append(". ")
+          .append(card.getValue()).append(": ")
+          .append(card.getName());
+    }
+    TCPServer.broadcast(deckOrder.toString());
+
     // Remove and store face-down card
     faceDownCard = cards.remove(cards.size() - 1);
-    TCPServer.broadcast("A card has been removed face-down from the deck.");
+    TCPServer.broadcast("\nFace-down card removed: " + faceDownCard.getValue() + ": " + faceDownCard.getName());
 
     if (numberOfPlayers == 2) {
       // For 2 players, remove 3 more cards face-up
@@ -42,11 +52,12 @@ public final class Deck {
       faceUpCards[1] = cards.remove(cards.size() - 1);
       faceUpCards[2] = cards.remove(cards.size() - 1);
 
-      StringBuilder faceUpMessage = new StringBuilder("Face-up removed cards: ");
+      StringBuilder faceUpMessage = new StringBuilder("Face-up removed cards:");
       for (Card card : faceUpCards) {
-        faceUpMessage.append(card.getName()).append(" ");
+        faceUpMessage.append("\n- ").append(card.getValue())
+            .append(": ").append(card.getName());
       }
-      TCPServer.broadcast(faceUpMessage.toString().trim());
+      TCPServer.broadcast(faceUpMessage.toString());
     }
   }
 
@@ -131,12 +142,10 @@ public final class Deck {
 
   private void initDeckExtra() {
     cards.add(Card.ASSASSIN);
+    cards.add(Card.ASSASSIN);  // Add second Assassin
 
     cards.add(Card.JESTER);
-
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
+    cards.add(Card.JESTER);    // Add second Jester
 
     cards.add(Card.CARDINAL);
     cards.add(Card.CARDINAL);
@@ -148,11 +157,14 @@ public final class Deck {
     cards.add(Card.SYCOPHANT);
 
     cards.add(Card.COUNT);
+    cards.add(Card.COUNT);    
 
+    cards.add(Card.DOWAGERQUEEN);
     cards.add(Card.DOWAGERQUEEN);
 
     cards.add(Card.BISHOP);
+    cards.add(Card.BISHOP);
 
-    assert cards.size() == 32;
+    assert cards.size() == 32;  // Now should be 32 total (16 original + 16 extra)
   }
 }

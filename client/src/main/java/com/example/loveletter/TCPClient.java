@@ -13,21 +13,17 @@ import java.util.logging.Logger;
 
 /**
  * TCPClient connects to the Love Letter server and facilitates user input/output.
+ * works as an entry poin for the client application  so that java runtime can execute it
  *
  * <p>The client connects to the server using the host and port specified by system properties
  * (defaults: host = "localhost", port = 12345). It prompts the user for a nickname, sends messages
- * from the user to the server, and displays incoming messages from the server asynchronously.
+ * from the user to the server via socket, and displays incoming messages from the server asynchronously.
  */
 public class TCPClient {
-  // J: entry point (?) - to be accessible from outside its package, so that java runtime can
-  // execute it
-  // J: socket을 이용해서 서버에 연결, 실시간으로 메시지 전송, 채팅창 메시지 입력받는 separate thread `multithreading` 하는 클래스
-  // J: encapsulation by private constants, modularity by separate concerns
+  // encapsulation by private constants, modularity by separate concerns
 
   /** Logger for logging client events and errors. */
   private static final Logger LOGGER = Logger.getLogger(TCPClient.class.getName());
-
-  // J: private; 다른 클래스에서 수정 불가, static; 클래스내 모든 인스턴스에서 공유됨, final; not to be reassigned
 
   /**
    * The port number of the server.
@@ -37,7 +33,6 @@ public class TCPClient {
   private static final int SERVER_PORT =
       Integer.parseInt(System.getProperty("server.port", "12345"));
 
-  // J: private; port shouldn't be modifiable by external classes
 
   /**
    * The hostname of the server.
@@ -51,7 +46,6 @@ public class TCPClient {
    */
   static boolean reconnecting = false;
 
-  // J: not private as it can be accessed from a diff thread ?
 
   /**
    * The main method initiates the client, connects to the server, and handles input/output.
@@ -63,14 +57,14 @@ public class TCPClient {
     BufferedReader consoleReader =
         new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
-    while (true) { // J: infinite loop 문제가 생기거나 연결 끊기더라도 keep retrying connections
+    while (true) { // infinite loop to keep retrying connections
       try (Socket socket =
-              new Socket(SERVER_HOST, SERVER_PORT); // J: create socket conn to the server
+              new Socket(SERVER_HOST, SERVER_PORT); // create socket conn to the server
           BufferedReader in =
-              new BufferedReader( // J: reads data from the server
+              new BufferedReader( // eads data from the server
                   new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
           PrintWriter server =
-              new PrintWriter( // J: send msg to the server
+              new PrintWriter( // send msg to the server
                   new BufferedWriter(
                       new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)),
                   true)) {
@@ -89,7 +83,7 @@ public class TCPClient {
 
         // Start a thread to asynchronously read messages from the server.
         Thread readerThread =
-            new Thread( // J: separate thread to listen for msg from the server
+            new Thread( // separate thread to listen for msg from the server
                 () -> {
                   String msg;
                   try {
@@ -118,7 +112,7 @@ public class TCPClient {
             socket.close(); // This will cause the reader thread to exit.
             readerThread.interrupt();
             break;
-          } else { // J: 나머지 경우엔 인풋 서버로 전송
+          } else { // send to the server
             server.println(userInput);
           }
         }

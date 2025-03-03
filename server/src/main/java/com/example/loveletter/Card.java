@@ -198,7 +198,11 @@ public enum Card {
       "When the round ends, if it is necessary to check the number in the players' hands to"
           + " determine a winner, the Count will increase that number by 1. Note that this stacks,"
           + " so if you have both copies of the Count in your discard pile, the number will"
-          + " increase by 2.",
+          + " increase by 2. In this case, the cards with a number of 7—the Countess and the"
+          + " Dowager Queen—would beat the Princess. If increasing the number of the card in your"
+          + " hand with the Count would result in a tie for highest number in a player's hand,"
+          + " then resolve ties normally, by adding the numbers of the cards in the discard pile"
+          + " of each tied player and comparing the totals.",
       new CountEffect()),
 
   /**
@@ -239,7 +243,7 @@ public enum Card {
       "Cardinal",
       "(Value: 2) When you discard the Cardinal, choose exactly 2 players (you may include"
           + " yourself), who will switch hands. Then, once the hands are switched, you may look at"
-          + " one of them without revealing it to any other players. If less than 2 players still"
+          + " the first target player's hand without revealing it to any other players. If less than 2 players still"
           + " in the round can be chosen, (eg. due to Handmaid or Sycophant), this card is"
           + " discarded without effect.",
       new CardinalEffect()),

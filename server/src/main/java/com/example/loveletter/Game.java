@@ -116,7 +116,7 @@ public class Game {
     // Send game rules before starting
     TCPServer.broadcast(
         """
-\ud83d\udcdc Game Overview: Each player starts with one card. On your turn, draw a card and discard one, applying its effect. Effects may eliminate players or provide advantages. A round ends when all but one player is eliminated or the deck is empty. The player with the highest card wins the round and earns a Token of Affection. The first player to collect the required number of tokens wins the game.\
+  \ud83d\udcdc Game Overview: Each player starts with one card. On your turn, draw a card and discard one, applying its effect. Effects may eliminate players or provide advantages. A round ends when all but one player is eliminated or the deck is empty. The player with the highest card wins the round and earns a Token of Affection. The first player to collect the required number of tokens wins the game.\
 """);
 
     // Send gameplay commands right after rules
@@ -305,7 +305,7 @@ public class Game {
   public void eliminatePlayer(Player player) {
     player.setAlive(false);
     TCPServer.broadcast("- " + player.getName() + " is out of the round.");
-    TCPServer.sendDirect(player.getName(), "\nYou are out of the round.");
+    TCPServer.sendDirect(player.getName(), "You are out of the round.");
 
     // Show remaining players and turn order
     List<Player> alivePlayers = getAlivePlayers();
@@ -679,7 +679,18 @@ public class Game {
     }
 
     if (card == Card.GUARD && action.getGuess() == -1) {
-      throw new IllegalArgumentException("Guard requires a guess");
+      throw new IllegalArgumentException("Guard requires a guess in the form of a number");
+    }
+
+    // Check if card needs a target but has none available
+    if (targetPlayer == null && !card.getEffect().hasValidTargets(this, currentPlayer)) {
+      // Allow discard without effect if no valid targets exist
+      TCPServer.broadcast(
+          "- " + currentPlayer.getName() + " discards " + card.getName() + 
+          " with no effect (no valid targets due to Handmaid).");
+      currentPlayer.discard(card);
+      nextTurn();
+      return;
     }
 
     // Apply the card effect
@@ -741,7 +752,8 @@ public class Game {
   public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
     TCPServer.sendDirect(
         currentPlayer.getName(),
-        "- " + targetPlayer.getHand().toString()) + " from " + targetPlayer.getName() + "'s hand is ";
+        ("- " + targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString())
+    );
   }
 
   /**

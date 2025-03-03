@@ -1,5 +1,7 @@
 package com.example.loveletter.effect;
 
+import java.util.List;
+
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
 import com.example.loveletter.TCPServer;
@@ -29,5 +31,17 @@ public class SycophantEffect implements Effect {
         ". The next card played must include " + targetPlayer.getName() + " as a target if it has a targeting effect.");
 
     return true;
+  }
+
+  @Override
+  public boolean canTargetSelf() {
+    return true;
+  }
+
+  @Override
+  public List<Player> validTargets(Game game, Player currentPlayer) {
+    return game.getAlivePlayers().stream()
+        .filter(p -> !p.isProtectedByHandmaid() || p == currentPlayer)
+        .toList();
   }
 }

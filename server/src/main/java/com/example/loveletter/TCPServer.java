@@ -28,8 +28,7 @@ public class TCPServer {
 
   private static final Logger LOGGER =
       Logger.getLogger(
-          TCPServer.class.getName()); // Other classes don't need to access the server's logger
-
+          TCPServer.class.getName());
   /**
    * Port on which the server listens (default: 12345, can be overridden via system property
    * "server.port").
@@ -51,26 +50,19 @@ public class TCPServer {
    */
   private static volatile Game currentGame = null;
 
-  // J: `volatile` ensures visibility of updates across multiple threads.
-  // J: so that changes made to currentGame by one thread are immediately visible to all other
-  // threads.
-  // J: Since TCPServer is a singleton server (only one instance runs), currentGame should be shared
-  // across all client threads.
-  // J: private: any client or external class could modify the game state unpredictably.
-
   /**
    * The main method starts the server and listens for incoming connections.
    *
    * @param args command-line arguments (not used)
    */
   public static void main(
-      String[] args) { // J: Creates a ServerSocket that listens on a specified port.
+      String[] args) { // Creates a ServerSocket that listens on a specified port.
     try (ServerSocket serverSocket = new ServerSocket(PORT)) {
       System.out.println("Server running on port " + PORT);
       while (true) { // Infinite loop (while (true)) waits for new clients
         Socket socket = serverSocket.accept();
         new Thread(new ClientHandler(socket))
-            .start(); // J: Starts a new thread to handle each client separately
+            .start(); // Starts a new thread to handle each client separately
       }
     } catch (IOException ex) {
       LOGGER.log(Level.SEVERE, "Server exception", ex);
@@ -85,7 +77,7 @@ public class TCPServer {
    */
   public static void broadcast(String message, ClientHandler exclude) {
     System.out.println("Broadcasting: " + message);
-    synchronized (clients) { // J: Ensures thread-safe access while iterating over clients
+    synchronized (clients) { // Ensures thread-safe access while iterating over clients
       for (ClientHandler client : clients.values()) {
         if (client != exclude) {
           client.send(message);
@@ -141,7 +133,7 @@ public class TCPServer {
       client.send(message);
       return true;
     }
-    return false; // J: Q: what does it do?
+    return false; 
   }
 
   /**
@@ -150,8 +142,7 @@ public class TCPServer {
    * <p>This inner class processes incoming messages and commands from the client.
    */
   public static class ClientHandler implements Runnable {
-    // J: static, it does not require an instance of TCPServer to be created, so that it can be used
-    // independently of the outer TCPServer class.
+    // independent fro the outer TCPServer class.
 
     /** The socket associated with this client. */
     private final Socket socket;
@@ -214,11 +205,9 @@ public class TCPServer {
      * messages, handles commands, and ensures proper cleanup on disconnection.
      */
     @Override
-    // J: make sure that run() is an implementation of Runnable.run().
-    // J: when there is an error under run(), the compiler throws an error instead of silently
-    // creating a new method
-    public void run() { // J: `run` contains the code that will be executed in a separate thread.
-      // J: below is the client handling logic
+    // make sure that run() is an implementation of Runnable.run().
+    public void run() { // `run` contains the code that will be executed in a separate thread.
+      // below is the client handling logic
       try {
         in =
             new BufferedReader(
@@ -297,6 +286,7 @@ public class TCPServer {
      *   <li><code>/explain &lt;card&gt;</code> - Explains the card.
      *   <li><code>/end</code> - Ends the current game.
      *   <li><code>/values</code> - Shows all card values.
+     *   <li><code>/discarded &lt;player&gt;</code> - Shows the discarded cards of a player.
      * </ul>
      *
      * @param message the command message received from the client
@@ -378,7 +368,6 @@ public class TCPServer {
             send("Error: No active game in progress.");
             break;
           }
-          // Split into more tokens to handle card, target, and guess separately
           String[] playTokens = message.split(" ");
           if (playTokens.length < 2) {
             send("Error: Usage /play <card> [target] [guess]");
@@ -472,6 +461,22 @@ public class TCPServer {
             values.append(card.getValue()).append(" - ").append(card.getName()).append("\n");
           }
           send(values.toString());
+        }
+        case "/discarded" -> {
+          // Show discarded cards of a player
+          if (tokens.length < 2) {
+            send("Error: Usage /discarded <player>");
+          } else {
+            String targetPlayer = tokens[1];
+            String discardPile = currentGame.getPlayerDiscardPile(targetPlayer);
+            if (discardPile == null) {
+              send("Error: Player '" + targetPlayer + "' not found.");
+            } else if (discardPile.equals("[]")) {
+              send(targetPlayer + "'s discarded cards: No cards discarded yet");
+            } else {
+              send(targetPlayer + "'s discarded cards: " + discardPile);
+            }
+          }
         }
         default -> {
           // Try processing the command without the forward slash

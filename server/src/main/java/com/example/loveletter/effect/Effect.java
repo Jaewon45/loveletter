@@ -1,8 +1,9 @@
 package com.example.loveletter.effect;
 
+import java.util.List;
+
 import com.example.loveletter.Game;
 import com.example.loveletter.Player;
-import java.util.List;
 
 /**
  * Represents the special power of a card.
@@ -29,16 +30,27 @@ public interface Effect {
   }
 
   /**
-   * Checks if there are any valid targets for the effect. If all other players are protected by
-   * Handmaid, the effect cannot target anyone.
+   * Returns list of valid targets for this effect.
+   * By default, excludes self and handmaid-protected players.
+   */
+  default List<Player> validTargets(Game game, Player currentPlayer) {
+    return game.getAlivePlayers().stream()
+        .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
+        .toList();
+  }
+
+  /**
+   * Checks if there are any valid targets for this effect.
    */
   default boolean hasValidTargets(Game game, Player currentPlayer) {
     return !validTargets(game, currentPlayer).isEmpty();
   }
 
-  default List<Player> validTargets(Game game, Player currentPlayer) {
-    return game.getAlivePlayers().stream()
-        .filter(p -> p != currentPlayer && !p.isProtectedByHandmaid())
-        .toList();
+  /**
+   * Whether this effect can target the player themselves.
+   * Override to return true for effects like Prince that can self-target.
+   */
+  default boolean canTargetSelf() {
+    return false;
   }
 }

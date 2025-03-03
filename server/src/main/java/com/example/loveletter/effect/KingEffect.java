@@ -56,6 +56,11 @@ public class KingEffect implements Effect {
       // Announce card movements to all players
       TCPServer.broadcast(
           "- " + currentPlayer.getName() + " and " + targetPlayer.getName() + " swap their hands.");
+
+      // Show new hands to respective players
+      game.revealHandToPlayer(currentPlayer, currentPlayer);
+      game.revealHandToPlayer(targetPlayer, targetPlayer);
+
       return true;
     }
     return false;
