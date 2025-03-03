@@ -16,6 +16,10 @@ change in config.properties
 ## Building and Running
 
 1. Build and startthe project: 
+to generate the ./gradlew file, run
+```bash
+gradle wrapper
+```
 
 2. Run the server:
 ```bash

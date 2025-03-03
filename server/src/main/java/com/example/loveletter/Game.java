@@ -238,16 +238,13 @@ public class Game {
       Player currentPlayer, Card cardToDiscard, Player target, int guess, Player secondTarget) {
     // Check if there's a forced target from Sycophant
     Player currentForcedTarget = getForcedTarget();
-    if (currentForcedTarget != null
-        && (cardToDiscard.getEffect().requiresSecondTarget() || target != null)) {
+    if (currentForcedTarget != null && 
+        (cardToDiscard.getEffect().requiresSecondTarget() || target != null)) {
       // For cards that require targets, either target can be the forced target
-      if (target != currentForcedTarget
-          && (secondTarget == null || secondTarget != currentForcedTarget)) {
+      if (target != currentForcedTarget && (secondTarget == null || secondTarget != currentForcedTarget)) {
         TCPServer.sendDirect(
             currentPlayer.getName(),
-            "Due to Sycophant's effect, you must include "
-                + currentForcedTarget.getName()
-                + " as a target.");
+            "Due to Sycophant's effect, you must include " + currentForcedTarget.getName() + " as a target.");
         return false;
       }
     }
@@ -289,7 +286,7 @@ public class Game {
     if (legalMove) {
       currentPlayer.getHand().remove(cardToDiscard);
       currentPlayer.addToDiscardPile(cardToDiscard);
-
+      
       // Clear the forced target after a successful card play
       setForcedTarget(null);
 
@@ -689,11 +686,8 @@ public class Game {
     if (targetPlayer == null && !card.getEffect().hasValidTargets(this, currentPlayer)) {
       // Allow discard without effect if no valid targets exist
       TCPServer.broadcast(
-          "- "
-              + currentPlayer.getName()
-              + " discards "
-              + card.getName()
-              + " with no effect (no valid targets due to Handmaid).");
+          "- " + currentPlayer.getName() + " discards " + card.getName() + 
+          " with no effect (no valid targets due to Handmaid).");
       currentPlayer.discard(card);
       nextTurn();
       return;
@@ -758,7 +752,8 @@ public class Game {
   public void revealHandToPlayer(Player currentPlayer, Player targetPlayer) {
     TCPServer.sendDirect(
         currentPlayer.getName(),
-        ("- " + targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString()));
+        ("- " + targetPlayer.getName() + "'s hand: " + targetPlayer.getHand().toString())
+    );
   }
 
   /**
@@ -773,26 +768,15 @@ public class Game {
 
     // Check for Jester predictions
     for (Player player : players) {
-      if (player.getJesterTarget() == winner) {
+      if (player.jesterTarget == winner) {
         TCPServer.broadcast(
             "- " + player.getName() + " gains a token from their Jester prediction!");
         scores.put(player.getName(), scores.getOrDefault(player.getName(), 0) + 1);
       }
-    }
 
     if (endGameIfEnough && scores.get(winner.getName()) >= tokensNeededToWin()) {
       endGame();
-    }
-  }
-
-  /**
-   * Draws a new card for the target player if the deck is not empty.
-   *
-   * @param targetPlayer The player drawing the card.
-   */
-  public void drawCardFor(Player targetPlayer) {
-    if (!deck.isEmpty()) {
-      deck.draw(targetPlayer);
+      }
     }
   }
 

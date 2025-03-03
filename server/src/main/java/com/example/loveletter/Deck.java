@@ -95,31 +95,36 @@ public final class Deck {
 
   /** Initializes the deck by adding one copy of each card. */
   private void initDeck() {
+    // Debug mode - limited card set for testing
+    cards.add(Card.DOWAGERQUEEN);  // 7
+    cards.add(Card.CONSTABLE);     // 6
+    cards.add(Card.COUNT);         // 5
+    cards.add(Card.SYCOPHANT);     // 4
+    cards.add(Card.COUNTESS);      // 7
+    cards.add(Card.KING);          // 6
+    cards.add(Card.JESTER);        // 0
+
+    // Comment out original deck initialization
+    /*
     cards.add(Card.PRINCESS);
-
     cards.add(Card.COUNTESS);
-
     cards.add(Card.KING);
-
     cards.add(Card.PRINCE);
     cards.add(Card.PRINCE);
-
     cards.add(Card.HANDMAID);
     cards.add(Card.HANDMAID);
-
     cards.add(Card.BARON);
     cards.add(Card.BARON);
-
     cards.add(Card.PRIEST);
     cards.add(Card.PRIEST);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    cards.add(Card.GUARD);
+    */
 
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-    cards.add(Card.GUARD);
-
-    assert cards.size() == 16;
+    assert cards.size() == 7;  // Changed from 16 to 7 for debug mode
   }
 
   /**
@@ -146,30 +151,13 @@ public final class Deck {
   }
 
   private void initDeckExtra() {
-    cards.add(Card.ASSASSIN);
-    cards.add(Card.ASSASSIN); // Add second Assassin
-
+    // Debug mode - add second copies
+    cards.add(Card.DOWAGERQUEEN);
+    cards.add(Card.CONSTABLE);
+    cards.add(Card.COUNT);
+    cards.add(Card.SYCOPHANT);
     cards.add(Card.JESTER);
-    cards.add(Card.JESTER); // Add second Jester
 
-    cards.add(Card.CARDINAL);
-    cards.add(Card.CARDINAL);
-
-    cards.add(Card.BARONESS);
-    cards.add(Card.BARONESS);
-
-    cards.add(Card.SYCOPHANT);
-    cards.add(Card.SYCOPHANT);
-
-    cards.add(Card.COUNT);
-    cards.add(Card.COUNT);
-
-    cards.add(Card.DOWAGERQUEEN);
-    cards.add(Card.DOWAGERQUEEN);
-
-    cards.add(Card.BISHOP);
-    cards.add(Card.BISHOP);
-
-    assert cards.size() == 32; // Now should be 32 total (16 original + 16 extra)
+    assert cards.size() == 12;  // Changed for debug mode
   }
 }

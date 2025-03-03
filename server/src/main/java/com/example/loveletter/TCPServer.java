@@ -468,13 +468,12 @@ public class TCPServer {
           } else {
             String targetPlayer = tokens[1];
             String discardPile = currentGame.getPlayerDiscardPile(targetPlayer);
-            if (discardPile == null) {
+            if (null == discardPile) {
               send("Error: Player '" + targetPlayer + "' not found.");
-            } else if (discardPile.equals("[]")) {
-              send(targetPlayer + "'s discarded cards: No cards discarded yet");
-            } else {
-              send(targetPlayer + "'s discarded cards: " + discardPile);
-            }
+            } else switch (discardPile) {
+                  case "[]" -> send(targetPlayer + "'s discarded cards: No cards discarded yet");
+                  default -> send(targetPlayer + "'s discarded cards: " + discardPile);
+              }
           }
         }
         default -> {
