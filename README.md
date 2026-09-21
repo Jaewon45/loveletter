@@ -34,7 +34,7 @@ gradle wrapper
 ## Architecture
 
 Server Architecture:
-
+```
 ├── CardAction.java
 ├── Card.java
 ├── Deck.java
@@ -60,6 +60,7 @@ Server Architecture:
 ├── Game.java
 ├── Player.java
 └── TCPServer.java
+```
 
 the server logic is only slightly decoupled from the game logic
 
